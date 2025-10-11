@@ -37,7 +37,7 @@ fun AppNavigation(navController: NavHostController) {
             })
         }
         composable("habit_list") {
-            HabitListScreen(onBack = { navController.popBackStack() })
+            HabitListScreen(navController = navController)
         }
     }
 }
