@@ -15,10 +15,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.habittracker.ui.theme.HabitTrackerTheme
+import com.google.firebase.FirebaseApp
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        FirebaseApp.initializeApp(this)
         setContent {
             HabitTrackerTheme {
                 val navController = rememberNavController()
@@ -54,7 +56,7 @@ fun WelcomeScreen(onStartClicked: () -> Unit) {
         Text(
             text = "Üdvözöl a Szokáskövető!",
             fontSize = 28.sp,
-            color = MaterialTheme.colorScheme.primary
+            color = MaterialTheme.colorScheme.tertiary
         )
 
         Spacer(modifier = Modifier.height(16.dp))
