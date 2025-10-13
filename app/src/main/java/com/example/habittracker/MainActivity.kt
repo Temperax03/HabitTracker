@@ -1,5 +1,6 @@
 package com.example.habittracker
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -21,11 +22,28 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         FirebaseApp.initializeApp(this)
+
+        val prefs = getSharedPreferences("HabitPrefs", Context.MODE_PRIVATE)
+        val hasHabits = prefs.getBoolean("hasHabits", false)
         setContent {
             HabitTrackerTheme {
                 val navController = rememberNavController()
-                AppNavigation(navController)
+                val startDestination = if (hasHabits) "habit_list" else "welcome"
+
+                NavHost(navController = navController, startDestination = startDestination) {
+                    composable("welcome") {
+                        WelcomeScreen(onStartClicked = {
+                            navController.navigate("habit_list") {
+                                popUpTo("welcome") { inclusive = true }
+                            }
+                        })
+                    }
+                    composable("habit_list") {
+                        HabitListScreen(navController = navController)
+                    }
+                }
             }
+
         }
     }
 }
