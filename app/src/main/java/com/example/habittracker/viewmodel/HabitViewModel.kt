@@ -21,15 +21,17 @@ class HabitViewModel : ViewModel() {
         }
     }
 
-    fun addHabit(name: String) = repository.addHabit(name)
+    fun addHabit(name: String, icon: String = "🔥", weeklyGoal: Int = 5) =
+        repository.addHabit(name, icon, weeklyGoal)
     fun deleteHabit(id: String) = repository.deleteHabit(id)
 
     fun updateHabit(habit: Habit, completedDates: List<String>, streak: Int) {
         repository.updateHabit(habit.id, completedDates, streak)
     }
-    fun updateHabitName(id: String, name: String) {
-        repository.updateHabitName(id, name)
-    }
+
+    fun updateHabitName(id: String, name: String) = repository.updateHabitName(id, name)
+    fun updateHabitIcon(id: String, icon: String) = repository.updateHabitIcon(id, icon)
+    fun updateHabitWeeklyGoal(id: String, weeklyGoal: Int) = repository.updateHabitWeeklyGoal(id, weeklyGoal)
 
     override fun onCleared() {
         listener?.remove()

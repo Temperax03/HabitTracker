@@ -30,25 +30,26 @@ fun HabitDetailScreen(
 ) {
     val habit = viewModel.habits.firstOrNull { it.id == habitId }
     var name by remember(habit) { mutableStateOf(habit?.name.orEmpty()) }
+    var icon by remember(habit) { mutableStateOf(habit?.icon ?: "🔥") }
+    var weeklyGoal by remember(habit) { mutableStateOf((habit?.weeklyGoal ?: 5).toFloat()) }
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("Szokás részletei") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Outlined.ArrowBack, contentDescription = "Vissza")
-                    }
+                    IconButton(onClick = onBack) { Icon(Icons.Outlined.ArrowBack, "Vissza") }
                 },
                 actions = {
-                    IconButton(
-                        onClick = {
-                            if (habit != null && name.isNotBlank()) {
-                                viewModel.updateHabitName(habit.id, name.trim())
-                                onBack()
-                            }
+                    IconButton(onClick = {
+                        habit ?: return@IconButton
+                        if (name.isNotBlank()) {
+                            viewModel.updateHabitName(habit.id, name.trim())
+                            viewModel.updateHabitIcon(habit.id, icon)
+                            viewModel.updateHabitWeeklyGoal(habit.id, weeklyGoal.toInt())
+                            onBack()
                         }
-                    ) { Icon(Icons.Outlined.Save, contentDescription = "Mentés") }
+                    }) { Icon(Icons.Outlined.Save, "Mentés") }
                 }
             )
         }
@@ -61,10 +62,7 @@ fun HabitDetailScreen(
         }
 
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
+            Modifier.fillMaxSize().padding(padding).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             OutlinedTextField(
@@ -72,6 +70,32 @@ fun HabitDetailScreen(
                 onValueChange = { if (it.length <= 100) name = it },
                 label = { Text("Szokás neve") },
                 modifier = Modifier.fillMaxWidth()
+            )
+
+            // Ikonválasztó
+            Text("Ikon", style = MaterialTheme.typography.bodyMedium)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                val icons = listOf("🔥","✅","💧","📚","🏃‍♂️","🧘","🕗","🥦","☕","🎯")
+                icons.forEach { emoji ->
+                    val selected = icon == emoji
+                    AssistChip(
+                        onClick = { icon = emoji },
+                        label = { Text(emoji) },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer
+                            else MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    )
+                }
+            }
+
+            // Heti cél
+            Text("Heti cél: ${weeklyGoal.toInt()} nap / hét", style = MaterialTheme.typography.bodyMedium)
+            Slider(
+                value = weeklyGoal,
+                onValueChange = { weeklyGoal = it.coerceIn(0f, 7f) },
+                valueRange = 0f..7f,
+                steps = 6
             )
 
             // Heti mini-kártya
@@ -90,17 +114,13 @@ fun HabitDetailScreen(
 
             Spacer(Modifier.height(8.dp))
 
-            // Törlés gomb (itt van a kukázás)
             OutlinedButton(
-                onClick = {
-                    viewModel.deleteHabit(habit.id)
-                    onBack()
-                },
+                onClick = { viewModel.deleteHabit(habit.id); onBack() },
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = MaterialTheme.colorScheme.error
                 )
             ) {
-                Icon(Icons.Outlined.Delete, contentDescription = "Törlés")
+                Icon(Icons.Outlined.Delete, "Törlés")
                 Spacer(Modifier.width(8.dp))
                 Text("Szokás törlése")
             }
@@ -114,7 +134,6 @@ private fun SummaryMiniCard(
     days: List<LocalDate>,
     completed: List<String>
 ) {
-    // progress arány
     val doneCount = days.count { completed.contains(it.toString()) }
     val progress = (doneCount.toFloat() / days.size).coerceIn(0f, 1f)
 
@@ -126,33 +145,23 @@ private fun SummaryMiniCard(
         Column(Modifier.fillMaxWidth().padding(16.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(8.dp))
-
             LinearProgressIndicator(
                 progress = { progress },
                 modifier = Modifier.fillMaxWidth().height(10.dp),
                 trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 color = MaterialTheme.colorScheme.primary
             )
-
             Spacer(Modifier.height(12.dp))
-
-            // Kis rács: napok
             DayGrid(days = days, completed = completed)
         }
     }
 }
 
 @Composable
-private fun DayGrid(
-    days: List<LocalDate>,
-    completed: List<String>
-) {
-    // 7 oszlop (heti ritmusra áll jól)
+private fun DayGrid(days: List<LocalDate>, completed: List<String>) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(7),
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 84.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 84.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
         userScrollEnabled = false
@@ -160,25 +169,19 @@ private fun DayGrid(
         items(days) { date ->
             val isFuture = date.isAfter(LocalDate.now())
             val isDone = completed.contains(date.toString())
-            val boxColor =
-                when {
-                    isFuture -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                    isDone -> MaterialTheme.colorScheme.primary
-                    else -> MaterialTheme.colorScheme.surfaceVariant
-                }
-            val textColor =
-                if (isDone) MaterialTheme.colorScheme.onPrimary
-                else MaterialTheme.colorScheme.onSurfaceVariant
+            val boxColor = when {
+                isFuture -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                isDone -> MaterialTheme.colorScheme.primary
+                else -> MaterialTheme.colorScheme.surfaceVariant
+            }
+            val textColor = if (isDone) MaterialTheme.colorScheme.onPrimary
+            else MaterialTheme.colorScheme.onSurfaceVariant
 
             Box(
-                modifier = Modifier
-                    .size(28.dp)
+                modifier = Modifier.size(28.dp)
                     .clip(MaterialTheme.shapes.small)
                     .background(boxColor)
-                    .then(
-                        // részletekben nem modosítunk itt; csak jelzés
-                        Modifier
-                    ),
+                    .clickable(enabled = false) { }, // itt csak megjelenítés
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -192,7 +195,6 @@ private fun DayGrid(
     }
 }
 
-/** ma is beleértve: utolsó N nap */
 private fun lastNDates(n: Int): List<LocalDate> {
     val today = LocalDate.now()
     return (0 until n).map { today.minusDays(it.toLong()) }.reversed()

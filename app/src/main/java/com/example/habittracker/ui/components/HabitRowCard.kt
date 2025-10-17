@@ -3,7 +3,7 @@ package com.example.habittracker.ui.components
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -13,8 +13,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -26,53 +24,45 @@ import java.time.LocalDate
 fun HabitRowCard(
     habit: Habit,
     viewModel: HabitViewModel,
-    onClick: () -> Unit, // részletek megnyitása
+    onClick: () -> Unit
 ) {
     val today = LocalDate.now().toString()
     val isCompletedToday = remember(habit.completedDates) { habit.completedDates.contains(today) }
 
-    // Animációk: pipa háttere és mérete
+    // Heti mini-progress a weeklyGoal-hoz igazítva
+    val last7 = remember { lastNDays(7) }
+    val last7Done = last7.count { habit.completedDates.contains(it.toString()) }
+    val weeklyGoal = habit.weeklyGoal.coerceIn(0, 7)
+    val weeklyProgress = if (weeklyGoal == 0) 0f else (last7Done / weeklyGoal.toFloat()).coerceIn(0f, 1f)
+
     val bg by animateColorAsState(
-        targetValue = if (isCompletedToday)
-            MaterialTheme.colorScheme.primary
-        else
-            MaterialTheme.colorScheme.surfaceVariant,
+        targetValue = if (isCompletedToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
         label = "check_bg"
     )
-    val scale by animateFloatAsState(targetValue = if (isCompletedToday) 1.05f else 1f, label = "check_scale")
-
-    // Utolsó 7 napos arány a kis progress-hez
-    val last7 = remember(habit.completedDates) { lastNDays(7) }
-    val last7Progress = remember(habit.completedDates) {
-        val done = last7.count { habit.completedDates.contains(it.toString()) }
-        done / 7f
-    }
-
-    val haptics = LocalHapticFeedback.current
+    val scale by animateFloatAsState(if (isCompletedToday) 1.05f else 1f, label = "check_scale")
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(Modifier.fillMaxWidth()) {
+        Column {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Bal: cím + streak chip
+                // Leading ikon (emoji körben)
+                Box(
+                    modifier = Modifier.size(36.dp).background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) { Text(habit.icon, fontSize = 18.sp) }
+
+                Spacer(Modifier.width(12.dp))
+
+                // Cím + streak chip (kattintva részletek)
                 Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .combinedClickable(
-                            onClick = onClick,              // részletek
-                            onLongClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress) } // finom haptika
-                        ),
+                    modifier = Modifier.weight(1f).clickable { onClick() },
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text(
@@ -83,37 +73,26 @@ fun HabitRowCard(
                         overflow = TextOverflow.Ellipsis
                     )
                     Spacer(Modifier.height(4.dp))
-                    AssistChip(
-                        onClick = { /* no-op */ },
-                        label = { Text(text = "🔥 ${habit.streak}") }
-                    )
+                    AssistChip(onClick = {}, label = { Text("🔥 ${habit.streak}") })
                 }
 
                 Spacer(Modifier.width(12.dp))
 
-                // Jobb: kerek pipa — CSAK a mai napot kapcsolja
+                // Kerek pipa – mai nap toggle
                 Box(
-                    modifier = Modifier
-                        .size(34.dp)
-                        .background(bg, CircleShape)
-                        .combinedClickable(
-                            onClick = {
-                                val newDates = habit.completedDates.toMutableList()
-                                var newStreak = habit.streak
-                                val yesterday = LocalDate.now().minusDays(1).toString()
-
-                                if (!isCompletedToday) {
-                                    newDates.add(today)
-                                    newStreak = if (habit.completedDates.contains(yesterday)) newStreak + 1 else 1
-                                } else {
-                                    newDates.remove(today)
-                                    newStreak = 0
-                                }
-                                viewModel.updateHabit(habit, newDates, newStreak)
-                            },
-                            onLongClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress) }
-                        )
-                        .padding(6.dp),
+                    modifier = Modifier.size(34.dp).background(bg, CircleShape).clickable {
+                        val newDates = habit.completedDates.toMutableList()
+                        var newStreak = habit.streak
+                        val yesterday = LocalDate.now().minusDays(1).toString()
+                        if (!isCompletedToday) {
+                            newDates.add(today)
+                            newStreak = if (habit.completedDates.contains(yesterday)) newStreak + 1 else 1
+                        } else {
+                            newDates.remove(today)
+                            newStreak = 0
+                        }
+                        viewModel.updateHabit(habit, newDates, newStreak)
+                    }.padding(6.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     if (isCompletedToday) {
@@ -121,20 +100,16 @@ fun HabitRowCard(
                             imageVector = Icons.Rounded.Check,
                             contentDescription = "Kész",
                             tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .graphicsLayer { scaleX = scale; scaleY = scale }
+                            modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = scale; scaleY = scale }
                         )
                     }
                 }
             }
 
-            // Vékony, minimalista progress csík alul (utolsó 7 nap)
+            // Mini progress csík alul (heti célhoz igazítva)
             LinearProgressIndicator(
-                progress = { last7Progress.coerceIn(0f, 1f) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(3.dp),
+                progress = { weeklyProgress },
+                modifier = Modifier.fillMaxWidth().height(3.dp),
                 trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -142,7 +117,6 @@ fun HabitRowCard(
     }
 }
 
-/** Az utolsó N nap LocalDate listája (ma is benne). */
 private fun lastNDays(n: Int): List<LocalDate> {
     val today = LocalDate.now()
     return (0 until n).map { today.minusDays(it.toLong()) }.reversed()

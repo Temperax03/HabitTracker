@@ -4,5 +4,8 @@ data class Habit(
     val id: String = "",
     val name: String = "",
     val completedDates: List<String> = emptyList(),
-    val streak: Int = 0
+    val streak: Int = 0,
+
+    val icon: String = "🔥",
+    val weeklyGoal: Int = 5
 )
