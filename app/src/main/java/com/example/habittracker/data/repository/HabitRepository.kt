@@ -1,11 +1,8 @@
 package com.example.habittracker.data.repository
 
-import android.R.attr.icon
 import com.example.habittracker.data.model.Habit
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
-import com.google.protobuf.LazyStringArrayList.emptyList
-import kotlin.collections.emptyList
 
 
 

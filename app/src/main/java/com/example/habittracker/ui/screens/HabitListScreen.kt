@@ -1,14 +1,37 @@
 package com.example.habittracker.ui.screens
 
 import android.content.Context
-import androidx.compose.foundation.layout.*
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.*
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.CalendarViewWeek
+import androidx.compose.material.icons.outlined.Today
+import androidx.compose.material3.Button
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -55,21 +78,124 @@ fun HabitListScreen(
                 onAddClick = { isSheetOpen = true }
             )
         } else {
-            LazyColumn(
+            var selectedViewMode by rememberSaveable { mutableStateOf(HabitViewMode.Daily) }
+
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                items(habits, key = { it.id }) { habit ->
-                    HabitRowCard(
-                        habit = habit,
-                        viewModel = viewModel,
-                        onClick = { navController.navigate("habit_detail/${habit.id}") }
-                    )
+                HabitViewModeSelector(
+                    selectedMode = selectedViewMode,
+                    onModeSelected = { selectedViewMode = it }
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(habits, key = { it.id }) { habit ->
+                        HabitRowCard(
+                            habit = habit,
+                            viewModel = viewModel,
+                            viewMode = selectedViewMode,
+                            onClick = { navController.navigate("habit_detail/${habit.id}") }
+                        )
+                    }
                 }
             }
+        }
+    }
+}
+
+enum class HabitViewMode(val label: String, val description: String) {
+    Daily(label = "Napi nézet", description = "Napi nézet kiválasztása"),
+    Weekly(label = "Heti nézet", description = "Heti nézet kiválasztása"),
+    Monthly(label = "Havi nézet", description = "Havi nézet kiválasztása")
+}
+
+@Composable
+private fun HabitViewModeSelector(
+    selectedMode: HabitViewMode,
+    onModeSelected: (HabitViewMode) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        HabitViewModeButton(
+            modifier = Modifier.weight(1f),
+            icon = Icons.Outlined.Today,
+            mode = HabitViewMode.Daily,
+            isSelected = selectedMode == HabitViewMode.Daily,
+            onClick = { onModeSelected(HabitViewMode.Daily) }
+        )
+        HabitViewModeButton(
+            modifier = Modifier.weight(1f),
+            icon = Icons.Outlined.CalendarViewWeek,
+            mode = HabitViewMode.Weekly,
+            isSelected = selectedMode == HabitViewMode.Weekly,
+            onClick = { onModeSelected(HabitViewMode.Weekly) }
+        )
+        HabitViewModeButton(
+            modifier = Modifier.weight(1f),
+            icon = Icons.Outlined.CalendarMonth,
+            mode = HabitViewMode.Monthly,
+            isSelected = selectedMode == HabitViewMode.Monthly,
+            onClick = { onModeSelected(HabitViewMode.Monthly) }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HabitViewModeButton(
+    modifier: Modifier = Modifier,
+    icon: ImageVector,
+    mode: HabitViewMode,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val containerColor by animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+        label = "HabitViewModeButtonContainer"
+    )
+    val contentColor by animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+        label = "HabitViewModeButtonContent"
+    )
+
+    Surface(
+        modifier = modifier,
+        shape = MaterialTheme.shapes.large,
+        tonalElevation = if (isSelected) 6.dp else 1.dp,
+        color = containerColor,
+        onClick = onClick
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = mode.description,
+                tint = contentColor
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = mode.label,
+                style = MaterialTheme.typography.labelLarge,
+                color = contentColor
+            )
         }
     }
 }

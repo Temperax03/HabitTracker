@@ -9,8 +9,8 @@ lifecycleRuntimeKtx = "2.9.4"
 activityCompose = "1.11.0"
 composeBom = "2024.09.00"
 googleServices = "4.4.2"
-foundationLayout = "1.9.3"
-uiText = "1.9.3"
+foundationLayout = "1.7.3"
+uiText = "1.7.3"
 glance = "1.1.1"
 
 [libraries]
