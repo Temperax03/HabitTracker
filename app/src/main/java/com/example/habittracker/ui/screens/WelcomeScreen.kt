@@ -17,10 +17,20 @@ fun WelcomeScreen(onStartClicked: () -> Unit) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Üdvözöl a Szokáskövető!", fontSize = 28.sp, color = MaterialTheme.colorScheme.tertiary)
+        Text(
+            "Üdvözöl a Szokáskövető!",
+            fontSize = 28.sp,
+            color = MaterialTheme.colorScheme.tertiary
+        )
         Spacer(modifier = Modifier.height(16.dp))
-        Text("Kezdd el követni a napi céljaidat és szokásaidat!", fontSize = 18.sp)
+        Text(
+            "Kezdd el követni a napi céljaidat és szokásaidat!",
+            fontSize = 18.sp
+        )
         Spacer(modifier = Modifier.height(32.dp))
-        Button(onClick = onStartClicked) { Text("Kezdjük el!") }
+        Button(
+            onClick = onStartClicked,
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+        ) { Text("Kezdjük el!", color = MaterialTheme.colorScheme.onPrimary) }
     }
 }

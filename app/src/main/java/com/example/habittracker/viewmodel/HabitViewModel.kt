@@ -27,6 +27,9 @@ class HabitViewModel : ViewModel() {
     fun updateHabit(habit: Habit, completedDates: List<String>, streak: Int) {
         repository.updateHabit(habit.id, completedDates, streak)
     }
+    fun updateHabitName(id: String, name: String) {
+        repository.updateHabitName(id, name)
+    }
 
     override fun onCleared() {
         listener?.remove()

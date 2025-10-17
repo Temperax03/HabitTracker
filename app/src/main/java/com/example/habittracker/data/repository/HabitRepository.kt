@@ -37,4 +37,7 @@ class HabitRepository {
             mapOf("completedDates" to completedDates, "streak" to streak)
         )
     }
+    fun updateHabitName(id: String, name: String) {
+        collection.document(id).update(mapOf("name" to name))
+    }
 }

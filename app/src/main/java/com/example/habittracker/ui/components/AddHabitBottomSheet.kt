@@ -10,9 +10,10 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.Alignment
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.graphics.graphicsLayer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,14 +31,17 @@ fun AddHabitBottomSheet(
     var error by remember { mutableStateOf<String?>(null) }
     val focusManager = LocalFocusManager.current
 
+    val scale by animateFloatAsState(targetValue = if (isOpen) 1f else 0.95f)
+
     ModalBottomSheet(
         onDismissRequest = { onDismiss() },
-        sheetState = sheetState
+        sheetState = sheetState,
+        modifier = Modifier.graphicsLayer { scaleX = scale; scaleY = scale }
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp)
+                .padding(24.dp)
         ) {
             Text(text = "Új szokás hozzáadása", style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(12.dp))
@@ -50,8 +54,7 @@ fun AddHabitBottomSheet(
                         error = null
                     }
                 },
-                modifier = Modifier
-                    .fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 label = { Text("Szokás neve") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions.Default.copy(
@@ -59,9 +62,7 @@ fun AddHabitBottomSheet(
                     keyboardType = KeyboardType.Text
                 ),
                 keyboardActions = KeyboardActions(
-                    onDone = {
-                        focusManager.clearFocus(force = true)
-                    }
+                    onDone = { focusManager.clearFocus(force = true) }
                 )
             )
 
@@ -82,11 +83,8 @@ fun AddHabitBottomSheet(
             ) {
                 OutlinedButton(
                     onClick = {
-                        coroutineScope.launch {
-                            sheetState.hide()
-                        }.invokeOnCompletion {
-                            onDismiss()
-                        }
+                        coroutineScope.launch { sheetState.hide() }
+                            .invokeOnCompletion { onDismiss() }
                     }
                 ) {
                     Text("Mégse")
@@ -94,21 +92,18 @@ fun AddHabitBottomSheet(
 
                 Button(
                     onClick = {
-                        // Validáció
                         val name = text.trim()
                         when {
                             name.isEmpty() -> error = "A név nem lehet üres."
                             name.length < 2 -> error = "Legalább 2 karakter."
                             else -> {
-                                // Mentés
                                 onSave(name)
-                                coroutineScope.launch {
-                                    sheetState.hide()
-                                }.invokeOnCompletion {
-                                    text = ""
-                                    error = null
-                                    onDismiss()
-                                }
+                                coroutineScope.launch { sheetState.hide() }
+                                    .invokeOnCompletion {
+                                        text = ""
+                                        error = null
+                                        onDismiss()
+                                    }
                             }
                         }
                     }
@@ -116,8 +111,6 @@ fun AddHabitBottomSheet(
                     Text("Mentés")
                 }
             }
-
-            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
