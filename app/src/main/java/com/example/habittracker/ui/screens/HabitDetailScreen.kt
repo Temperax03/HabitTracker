@@ -3,9 +3,6 @@ package com.example.habittracker.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Delete
@@ -18,8 +15,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.habittracker.ui.components.HabitTimelineCard
+import com.example.habittracker.ui.components.lastNDates
 import com.example.habittracker.viewmodel.HabitViewModel
-import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -99,14 +97,14 @@ fun HabitDetailScreen(
             )
 
             // Heti mini-kártya
-            SummaryMiniCard(
+            HabitTimelineCard(
                 title = "Utolsó 7 nap",
                 days = lastNDates(7),
                 completed = habit.completedDates
             )
 
             // Havi mini-kártya
-            SummaryMiniCard(
+            HabitTimelineCard(
                 title = "Utolsó 30 nap",
                 days = lastNDates(30),
                 completed = habit.completedDates
@@ -126,76 +124,4 @@ fun HabitDetailScreen(
             }
         }
     }
-}
-
-@Composable
-private fun SummaryMiniCard(
-    title: String,
-    days: List<LocalDate>,
-    completed: List<String>
-) {
-    val doneCount = days.count { completed.contains(it.toString()) }
-    val progress = (doneCount.toFloat() / days.size).coerceIn(0f, 1f)
-
-    Card(
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-        Column(Modifier.fillMaxWidth().padding(16.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(8.dp))
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier.fillMaxWidth().height(10.dp),
-                trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Spacer(Modifier.height(12.dp))
-            DayGrid(days = days, completed = completed)
-        }
-    }
-}
-
-@Composable
-private fun DayGrid(days: List<LocalDate>, completed: List<String>) {
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(7),
-        modifier = Modifier.fillMaxWidth().heightIn(min = 84.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-        userScrollEnabled = false
-    ) {
-        items(days) { date ->
-            val isFuture = date.isAfter(LocalDate.now())
-            val isDone = completed.contains(date.toString())
-            val boxColor = when {
-                isFuture -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                isDone -> MaterialTheme.colorScheme.primary
-                else -> MaterialTheme.colorScheme.surfaceVariant
-            }
-            val textColor = if (isDone) MaterialTheme.colorScheme.onPrimary
-            else MaterialTheme.colorScheme.onSurfaceVariant
-
-            Box(
-                modifier = Modifier.size(28.dp)
-                    .clip(MaterialTheme.shapes.small)
-                    .background(boxColor)
-                    .clickable(enabled = false) { }, // itt csak megjelenítés
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = date.dayOfMonth.toString(),
-                    style = MaterialTheme.typography.bodySmall,
-                    textAlign = TextAlign.Center,
-                    color = textColor
-                )
-            }
-        }
-    }
-}
-
-private fun lastNDates(n: Int): List<LocalDate> {
-    val today = LocalDate.now()
-    return (0 until n).map { today.minusDays(it.toLong()) }.reversed()
 }
