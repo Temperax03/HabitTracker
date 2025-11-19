@@ -77,9 +77,18 @@ fun HabitTimelineGrid(
     completed: List<String>,
     modifier: Modifier = Modifier
 ) {
+    val rows = (days.size + 6) / 7  // 7 nap / sor
+    val cellSize = 28.dp
+    val spacing = 6.dp
+    val gridHeight = if (rows > 0) {
+        (rows * cellSize.value + (rows - 1) * spacing.value).dp
+    } else {
+        0.dp
+    }
+    val boundedHeight = maxOf(84.dp, gridHeight)
     LazyVerticalGrid(
         columns = GridCells.Fixed(7),
-        modifier = modifier.heightIn(min = 84.dp),
+        modifier = modifier.height(boundedHeight),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
         userScrollEnabled = false
