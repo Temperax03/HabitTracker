@@ -12,7 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
-
+import java.util.UUID
 class HabitRepository(
     private val habitDao: HabitDao,
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
@@ -24,8 +24,14 @@ class HabitRepository(
         val cachedUser = auth.currentUser
         if (cachedUser != null) return@withContext cachedUser.uid
 
-        val result = auth.signInAnonymously().await()
-        result.user?.uid ?: throw IllegalStateException("Anonymous authentication failed")
+        val localOwnerId = habitDao.getHabits().firstOrNull()?.ownerId
+        if (!localOwnerId.isNullOrBlank()) return@withContext localOwnerId
+
+        runCatching { auth.signInAnonymously().await() }
+            .mapCatching { result ->
+                result.user?.uid ?: throw IllegalStateException("Anonymous authentication failed")
+            }
+            .getOrElse { UUID.randomUUID().toString() }
     }
 
     private fun habitCollection(userId: String) =
@@ -76,7 +82,7 @@ class HabitRepository(
         }
     }
 
-    suspend fun addHabit(userId: String, habit: Habit) = withContext(dispatcher) {
+    suspend fun addHabit(userId: String, habit: Habit): Habit = withContext(dispatcher) {
         val weeklyGoal = habit.weeklyGoal.coerceIn(1, 7)
         val data = mapOf(
             "name" to habit.name,
@@ -86,7 +92,12 @@ class HabitRepository(
             "weeklyGoal" to weeklyGoal,
             "ownerId" to userId
         )
-        habitCollection(userId).add(data).await()
+        val habitId = runCatching { habitCollection(userId).add(data).await().id }
+            .getOrElse { habit.id.takeIf { id -> id.isNotBlank() } ?: UUID.randomUUID().toString() }
+
+        val storedHabit = habit.copy(id = habitId, weeklyGoal = weeklyGoal, ownerId = userId)
+        habitDao.upsert(storedHabit.toEntity(userId))
+        storedHabit
     }
 
     suspend fun deleteHabit(userId: String, id: String) = withContext(dispatcher) {

@@ -101,6 +101,10 @@ class HabitViewModel(
                 ownerId = userId
             )
             runCatching { repository.addHabit(userId, habit) }
+                .onSuccess { savedHabit ->
+                    _habits.removeAll { it.id == savedHabit.id }
+                    _habits.add(savedHabit)
+                }
                 .onFailure { errorMessage = it.message ?: "Nem sikerült menteni a szokást." }
         }
     }
