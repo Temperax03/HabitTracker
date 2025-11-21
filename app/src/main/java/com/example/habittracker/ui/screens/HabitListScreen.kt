@@ -61,8 +61,8 @@ fun HabitListScreen(
     AddHabitBottomSheet(
         isOpen = isSheetOpen,
         onDismiss = { isSheetOpen = false },
-        onSave = { name, icon, weeklyGoal, notificationTime ->
-            viewModel.addHabit(name, icon, weeklyGoal, notificationTime)
+        onSave = { name, icon, weeklyGoal, reminders ->
+            viewModel.addHabit(name, icon, weeklyGoal, reminders)
             val prefs = navController.context.getSharedPreferences("HabitPrefs", Context.MODE_PRIVATE)
             prefs.edit { putBoolean("hasHabits", true) }
             isSheetOpen = false

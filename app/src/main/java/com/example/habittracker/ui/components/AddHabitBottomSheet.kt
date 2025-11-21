@@ -1,6 +1,9 @@
 package com.example.habittracker.ui.components
 
-
+import android.app.TimePickerDialog
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -13,10 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -37,13 +37,16 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.habittracker.R
 import kotlinx.coroutines.launch
-
+import androidx.compose.runtime.mutableStateListOf
+import com.example.habittracker.data.model.ReminderTime
+import java.time.DayOfWeek
+import java.time.LocalTime
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AddHabitBottomSheet(
     isOpen: Boolean,
     onDismiss: () -> Unit,
-    onSave: (name: String, icon: String, weeklyGoal: Int, notificationTime: String?) -> Unit,
+    onSave: (name: String, icon: String, weeklyGoal: Int, reminders: List<ReminderTime>) -> Unit,
     initialText: String = "",
 ) {
     if (!isOpen) return
@@ -58,18 +61,23 @@ fun AddHabitBottomSheet(
     val icons = listOf("🔥","✅","💧","📚","🏃‍♂️","🧘","🕗","🥦","☕","🎯")
     var selectedIcon by remember { mutableStateOf("🔥") }
     var weeklyGoal by remember { mutableStateOf(5f) }
-    val notificationOptions = remember {
-        listOf(
-            context.getString(R.string.notification_option_none),
-            "08:00",
-            "12:00",
-            "18:00",
-            "20:00",
-            "21:00"
-        )
+    val reminders = remember { mutableStateListOf<ReminderTime>() }
+    var selectedDays by remember { mutableStateOf(setOf<DayOfWeek>()) }
+
+    fun showTimePicker() {
+        val now = LocalTime.now()
+        TimePickerDialog(
+            context,
+            { _, hour, minute ->
+                val timeString = String.format("%02d:%02d", hour, minute)
+                reminders.add(ReminderTime(timeString, selectedDays.map { it.value }))
+            },
+            now.hour,
+            now.minute,
+            true
+        ).show()
     }
-    var selectedNotification by remember { mutableStateOf(notificationOptions[3]) }
-    var isNotificationExpanded by remember { mutableStateOf(false) }
+
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(Modifier.fillMaxWidth().padding(20.dp)) {
@@ -119,37 +127,55 @@ fun AddHabitBottomSheet(
             Spacer(Modifier.height(12.dp))
             Text(text = stringResource(id = R.string.notification_time_label), style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.height(4.dp))
-            ExposedDropdownMenuBox(
-                expanded = isNotificationExpanded,
-                onExpandedChange = { isNotificationExpanded = it }
-            ) {
-                OutlinedTextField(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor(),
-                    readOnly = true,
-                    value = selectedNotification,
-                    onValueChange = { },
-                    label = { Text(stringResource(id = R.string.notification_time_hint)) },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isNotificationExpanded) },
-                    singleLine = true
-                )
-                ExposedDropdownMenu(
-                    expanded = isNotificationExpanded,
-                    onDismissRequest = { isNotificationExpanded = false }
-                ) {
-                    notificationOptions.forEach { option ->
-                        DropdownMenuItem(
-                            text = { Text(option) },
-                            onClick = {
-                                selectedNotification = option
-                                isNotificationExpanded = false
-                            },
-                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+            Text(text = stringResource(id = R.string.notification_days_hint), style = MaterialTheme.typography.bodySmall)
+            Spacer(Modifier.height(8.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                DayOfWeek.entries.forEach { day ->
+                    val selected = selectedDays.contains(day)
+                    AssistChip(
+                        onClick = {
+                            selectedDays = if (selected) selectedDays - day else selectedDays + day
+                        },
+                        label = { Text(day.name.take(3)) },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer
+                            else MaterialTheme.colorScheme.surfaceVariant
+
                         )
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(text = stringResource(id = R.string.notification_all_days_hint), style = MaterialTheme.typography.bodySmall)
+            Spacer(Modifier.height(8.dp))
+            Button(onClick = { showTimePicker() }) {
+                Text(text = stringResource(id = R.string.add_notification_time))
+            }
+
+            reminders.forEachIndexed { index, reminder ->
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    val dayLabel = if (reminder.days.isEmpty()) {
+                        stringResource(id = R.string.notification_every_day)
+                    } else {
+                        reminder.days.joinToString(",") { DayOfWeek.of(it).name.take(3) }
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = reminder.time, style = MaterialTheme.typography.bodyLarge)
+                        Text(text = dayLabel, style = MaterialTheme.typography.bodySmall)
+                    }
+                    OutlinedButton(onClick = { reminders.removeAt(index) }) {
+                        androidx.compose.material3.Icon(Icons.Filled.Delete, contentDescription = null)
+                        Spacer(Modifier.width(4.dp))
+                        Text(stringResource(id = R.string.remove_label))
                     }
                 }
             }
+
 
 
             Spacer(Modifier.height(18.dp))
@@ -166,13 +192,12 @@ fun AddHabitBottomSheet(
                             name.length < 2 -> error = "Legalább 2 karakter."
                             weeklyGoal < 1f -> error = "A heti cél legyen legalább 1 nap."
                             else -> {
-                                val notificationTime = selectedNotification.takeIf {
-                                    it != context.getString(R.string.notification_option_none)
-                                }
-                                onSave(name, selectedIcon, weeklyGoal.toInt(), notificationTime)
+                                onSave(name, selectedIcon, weeklyGoal.toInt(), reminders.toList())
                                 coroutineScope.launch { sheetState.hide() }.invokeOnCompletion {
                                     text = ""
                                     error = null
+                                    reminders.clear()
+                                    selectedDays = emptySet()
                                     onDismiss()
                                 }
                             }

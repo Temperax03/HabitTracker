@@ -10,7 +10,7 @@ fun HabitEntity.toDomain(): Habit = Habit(
     icon = icon,
     weeklyGoal = weeklyGoal,
     ownerId = ownerId,
-    notificationTime = notificationTime
+    reminders = reminders
 )
 
 fun Habit.toEntity(ownerIdOverride: String = ownerId): HabitEntity = HabitEntity(
@@ -21,5 +21,5 @@ fun Habit.toEntity(ownerIdOverride: String = ownerId): HabitEntity = HabitEntity
     icon = icon,
     weeklyGoal = weeklyGoal,
     ownerId = ownerIdOverride,
-    notificationTime = notificationTime
+    reminders = reminders,
 )

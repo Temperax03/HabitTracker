@@ -7,4 +7,9 @@
     <string name="notification_time_label">Értesítés időpontja</string>
     <string name="notification_time_hint">Válaszd ki, mikor jelezzen az alkalmazás</string>
     <string name="notification_option_none">Nincs értesítés</string>
+    <string name="notification_days_hint">Válaszd ki, hogy mely napokon szeretnél értesítést kapni (opcionális)</string>
+    <string name="notification_all_days_hint">Ha nem jelölsz napot, minden nap emlékeztetőt küldünk.</string>
+    <string name="add_notification_time">Időpont hozzáadása</string>
+    <string name="notification_every_day">Minden nap</string>
+    <string name="remove_label">Eltávolítás</string>
 </resources>

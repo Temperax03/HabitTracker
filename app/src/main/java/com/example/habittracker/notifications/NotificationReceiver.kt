@@ -12,10 +12,13 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.example.habittracker.R
 import com.example.habittracker.ui.MainActivity
-import java.time.LocalDate
+
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
-
+import com.example.habittracker.data.model.ReminderTime
+import java.time.DayOfWeek
+import java.time.LocalDateTime
+import java.time.ZoneId
 class NotificationReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         if (intent == null) return
@@ -23,6 +26,7 @@ class NotificationReceiver : BroadcastReceiver() {
         val habitName = intent.getStringExtra(KEY_HABIT_NAME) ?: return
         val streak = intent.getIntExtra(KEY_HABIT_STREAK, 0)
         val time = intent.getStringExtra(KEY_NOTIFICATION_TIME)
+        val days = intent.getIntArrayExtra(KEY_NOTIFICATION_DAYS)?.toList().orEmpty()
 
         createChannel(context)
 
@@ -49,31 +53,55 @@ class NotificationReceiver : BroadcastReceiver() {
         NotificationManagerCompat.from(context).notify(habitId.hashCode(), notification)
 
         if (!time.isNullOrBlank()) {
-            scheduleNextDay(context, habitId, habitName, streak, time)
+            scheduleNext(context, habitId, habitName, streak, time, days)
         }
     }
 
-    private fun scheduleNextDay(
+    private fun scheduleNext(
         context: Context,
         habitId: String,
         habitName: String,
         streak: Int,
-        time: String
+        time: String,
+        days: List<Int>
     ) {
         runCatching {
             val formatter = DateTimeFormatter.ofPattern("HH:mm")
             val localTime = LocalTime.parse(time, formatter)
-            val tomorrow = LocalDate.now().plusDays(1)
-            val triggerAt = tomorrow.atTime(localTime).atZone(java.time.ZoneId.systemDefault()).toInstant()
-            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            val nextIntent = NotificationScheduler.buildIntent(context, habitId, habitName, streak, time)
-            val pendingIntent = PendingIntent.getBroadcast(
-                context,
-                habitId.hashCode(),
-                nextIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt.toEpochMilli(), pendingIntent)
+            val now = LocalDateTime.now()
+            val allowedDays = days.takeIf { it.isNotEmpty() }
+                ?.mapNotNull { runCatching { DayOfWeek.of(it) }.getOrNull() }
+                ?.toSet()
+
+            for (offset in 1..14) {
+                val candidateDate = now.toLocalDate().plusDays(offset.toLong())
+                val dayMatches = allowedDays?.contains(candidateDate.dayOfWeek) ?: true
+                if (!dayMatches) continue
+                val candidateDateTime = candidateDate.atTime(localTime)
+                if (candidateDateTime.isAfter(now)) {
+                    val triggerAt = candidateDateTime.atZone(ZoneId.systemDefault()).toInstant()
+                    val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+                    val nextIntent = NotificationScheduler.buildIntent(
+                        context,
+                        habitId,
+                        habitName,
+                        streak,
+                        ReminderTime(time, days)
+                    )
+                    val pendingIntent = PendingIntent.getBroadcast(
+                        context,
+                        (habitId + time + days.sorted().joinToString(",")).hashCode(),
+                        nextIntent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                    )
+                    alarmManager.setExactAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        triggerAt.toEpochMilli(),
+                        pendingIntent
+                    )
+                    break
+                }
+            }
         }.getOrElse {
         }
     }
@@ -97,5 +125,6 @@ class NotificationReceiver : BroadcastReceiver() {
         const val KEY_HABIT_NAME = "habit_name"
         const val KEY_HABIT_STREAK = "habit_streak"
         const val KEY_NOTIFICATION_TIME = "notification_time"
+        const val KEY_NOTIFICATION_DAYS = "notification_days"
     }
 }

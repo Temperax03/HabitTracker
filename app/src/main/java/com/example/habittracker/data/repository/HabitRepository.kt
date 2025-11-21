@@ -13,6 +13,7 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.util.UUID
+import com.example.habittracker.data.model.ReminderTime
 class HabitRepository(
     private val habitDao: HabitDao,
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
@@ -66,7 +67,17 @@ class HabitRepository(
                 val streak = doc.getLong("streak")?.toInt() ?: 0
                 val icon = doc.getString("icon") ?: "🔥"
                 val weeklyGoal = doc.getLong("weeklyGoal")?.toInt() ?: 5
-                val notificationTime = doc.getString("notificationTime")
+                val reminderPayload = doc.get("reminders") as? List<Map<String, Any>>
+                val fallbackTime = doc.getString("notificationTime")
+                val reminders = reminderPayload?.mapNotNull { reminderMap ->
+                    val time = reminderMap["time"] as? String ?: return@mapNotNull null
+                    val days = (reminderMap["days"] as? List<*>)
+                        ?.mapNotNull { (it as? Number)?.toInt() }
+                        ?: emptyList()
+                    ReminderTime(time = time, days = days)
+                }.orEmpty().ifEmpty {
+                    fallbackTime?.let { listOf(ReminderTime(time = it)) } ?: emptyList()
+                }
 
                 Habit(
                     id = doc.id,
@@ -76,7 +87,7 @@ class HabitRepository(
                     icon = icon,
                     weeklyGoal = weeklyGoal,
                     ownerId = userId,
-                    notificationTime = notificationTime
+                    reminders = reminders
                 )
             }
 
@@ -92,8 +103,16 @@ class HabitRepository(
             "streak" to habit.streak,
             "icon" to habit.icon,
             "weeklyGoal" to weeklyGoal,
-            "ownerId" to userId
+            "ownerId" to userId,
+            "notificationTime" to habit.reminders.firstOrNull()?.time,
+            "reminders" to habit.reminders.map { reminder ->
+                mapOf(
+                    "time" to reminder.time,
+                    "days" to reminder.days
+                )
+            }
         )
+
         val habitId = runCatching { habitCollection(userId).add(data).await().id }
             .getOrElse { habit.id.takeIf { id -> id.isNotBlank() } ?: UUID.randomUUID().toString() }
 
@@ -117,8 +136,15 @@ class HabitRepository(
             "icon" to habit.icon,
             "weeklyGoal" to weeklyGoal,
             "ownerId" to userId,
-            "notificationTime" to habit.notificationTime
+            "notificationTime" to habit.reminders.firstOrNull()?.time,
+            "reminders" to habit.reminders.map { reminder ->
+                mapOf(
+                    "time" to reminder.time,
+                    "days" to reminder.days
+                )
+            }
         )
+
         document.set(payload).await()
         habitDao.upsert(habit.toEntity(userId))
     }

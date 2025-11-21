@@ -17,7 +17,7 @@ import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import com.example.habittracker.notifications.NotificationScheduler
-
+import com.example.habittracker.data.model.ReminderTime
 class HabitViewModel(
     application: Application,
     private val repository: HabitRepository
@@ -81,7 +81,12 @@ class HabitViewModel(
         )
     }
 
-    fun addHabit(name: String, icon: String = "🔥", weeklyGoal: Int = 5, notificationTime: String? = null) {
+    fun addHabit(
+        name: String,
+        icon: String = "🔥",
+        weeklyGoal: Int = 5,
+        reminders: List<ReminderTime> = emptyList()
+    ) {
         viewModelScope.launch {
             val userId = ensureUserAvailable() ?: return@launch
             errorMessage = null
@@ -100,7 +105,7 @@ class HabitViewModel(
                 icon = icon,
                 weeklyGoal = sanitizedGoal,
                 ownerId = userId,
-                notificationTime = notificationTime
+                reminders = reminders
             )
             runCatching { repository.addHabit(userId, habit) }
                 .onSuccess { savedHabit ->
@@ -110,7 +115,7 @@ class HabitViewModel(
                         habitId = savedHabit.id,
                         habitName = savedHabit.name,
                         streak = savedHabit.streak,
-                        notificationTime = savedHabit.notificationTime
+                        reminders = savedHabit.reminders
                     )
                 }
                 .onFailure { errorMessage = it.message ?: "Nem sikerült menteni a szokást." }
@@ -145,14 +150,20 @@ class HabitViewModel(
                         habitId = updated.id,
                         habitName = updated.name,
                         streak = updated.streak,
-                        notificationTime = updated.notificationTime
+                        reminders = updated.reminders
                     )
                 }
                 .onFailure { errorMessage = it.message ?: "Nem sikerült frissíteni a szokást." }
         }
     }
 
-    fun updateHabitDetails(habit: Habit, name: String, icon: String, weeklyGoal: Int) {
+    fun updateHabitDetails(
+        habit: Habit,
+        name: String,
+        icon: String,
+        weeklyGoal: Int,
+        reminders: List<ReminderTime>
+    ) {
         viewModelScope.launch {
             val userId = ensureUserAvailable() ?: return@launch
             val validationError = repository.validateUniqueness(name, icon, excludeId = habit.id)
@@ -166,6 +177,7 @@ class HabitViewModel(
                 streak = repository.calculateStreak(habit.completedDates),
                 icon = icon,
                 weeklyGoal = sanitizedGoal,
+                reminders = reminders
             )
             runCatching { repository.updateHabit(userId, updated) }
                 .onSuccess {
@@ -173,7 +185,7 @@ class HabitViewModel(
                         habitId = updated.id,
                         habitName = updated.name,
                         streak = updated.streak,
-                        notificationTime = updated.notificationTime
+                        reminders = updated.reminders
                     )
                 }
                 .onFailure { errorMessage = it.message ?: "Nem sikerült frissíteni a szokást." }
