@@ -1,71 +1,140 @@
 package com.example.habittracker.data.repository
 
+import com.example.habittracker.data.local.HabitDao
+import com.example.habittracker.data.local.toDomain
+import com.example.habittracker.data.local.toEntity
 import com.example.habittracker.data.model.Habit
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
+import java.time.LocalDate
 
+class HabitRepository(
+    private val habitDao: HabitDao,
+    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
+    private val dispatcher: CoroutineDispatcher = Dispatchers.IO
+) {
 
+    suspend fun ensureUserId(): String = withContext(dispatcher) {
+        val cachedUser = auth.currentUser
+        if (cachedUser != null) return@withContext cachedUser.uid
 
-class HabitRepository {
+        val result = auth.signInAnonymously().await()
+        result.user?.uid ?: throw IllegalStateException("Anonymous authentication failed")
+    }
 
-    private val firestore = FirebaseFirestore.getInstance()
-    private val collection = firestore.collection("habits")
+    private fun habitCollection(userId: String) =
+        firestore.collection("users").document(userId).collection("habits")
 
-    fun getHabits(onChange: (List<Habit>) -> Unit): ListenerRegistration {
-        return collection.addSnapshotListener { snapshot, e ->
-            if (e == null && snapshot != null) {
-                val habits = snapshot.documents.mapNotNull { doc ->
-                    val name = doc.getString("name") ?: return@mapNotNull null
-                    val completedDates = doc.get("completedDates") as? List<String> ?: emptyList()
-                    val streak = doc.getLong("streak")?.toInt() ?: 0
+    suspend fun loadCachedHabits(): List<Habit> = withContext(dispatcher) {
+        habitDao.getHabits().map { it.toDomain() }
+    }
 
-
-                    val icon = doc.getString("icon") ?: "🔥"
-                    val weeklyGoal = doc.getLong("weeklyGoal")?.toInt() ?: 5
-                    Habit(
-                        id = doc.id,
-                        name = name,
-                        completedDates = completedDates,
-                        streak = streak,
-                        icon = icon,
-                        weeklyGoal = weeklyGoal
-                    )
-                }
-                onChange(habits)
-            }
+    suspend fun replaceCache(habits: List<Habit>, ownerId: String) = withContext(dispatcher) {
+        habitDao.clear()
+        if (habits.isNotEmpty()) {
+            habitDao.upsertAll(habits.map { it.toEntity(ownerId) })
         }
     }
 
-    fun addHabit(name: String,
-                 icon: String = "🔥",
-                 weeklyGoal: Int = 5  ) {
-        val habitData = hashMapOf(
-            "name" to name,
-            "completedDates" to emptyList<String>(),
-            "streak" to 0,
-            "icon" to icon,
-            "weeklyGoal" to weeklyGoal
+    fun listenToHabits(
+        userId: String,
+        onChange: (List<Habit>) -> Unit,
+        onError: (Throwable) -> Unit
+    ): ListenerRegistration {
+        return habitCollection(userId).addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                onError(error)
+                return@addSnapshotListener
+            }
+            if (snapshot == null) return@addSnapshotListener
+
+            val habits = snapshot.documents.mapNotNull { doc ->
+                val name = doc.getString("name") ?: return@mapNotNull null
+                val completedDates = doc.get("completedDates") as? List<String> ?: emptyList()
+                val streak = doc.getLong("streak")?.toInt() ?: 0
+                val icon = doc.getString("icon") ?: "🔥"
+                val weeklyGoal = doc.getLong("weeklyGoal")?.toInt() ?: 5
+
+                Habit(
+                    id = doc.id,
+                    name = name,
+                    completedDates = completedDates,
+                    streak = streak,
+                    icon = icon,
+                    weeklyGoal = weeklyGoal,
+                    ownerId = userId
+                )
+            }
+
+            onChange(habits)
+        }
+    }
+
+    suspend fun addHabit(userId: String, habit: Habit) = withContext(dispatcher) {
+        val weeklyGoal = habit.weeklyGoal.coerceIn(1, 7)
+        val data = mapOf(
+            "name" to habit.name,
+            "completedDates" to habit.completedDates,
+            "streak" to habit.streak,
+            "icon" to habit.icon,
+            "weeklyGoal" to weeklyGoal,
+            "ownerId" to userId
         )
-        collection.add(habitData)
+        habitCollection(userId).add(data).await()
     }
 
-    fun deleteHabit(id: String) {
-        collection.document(id).delete()
+    suspend fun deleteHabit(userId: String, id: String) = withContext(dispatcher) {
+        habitDao.deleteById(id)
+        habitCollection(userId).document(id).delete().await()
     }
 
-    fun updateHabit(id: String, completedDates: List<String>, streak: Int) {
-        collection.document(id).update(
-            mapOf("completedDates" to completedDates, "streak" to streak)
+    suspend fun updateHabit(userId: String, habit: Habit) = withContext(dispatcher) {
+        val document = habitCollection(userId).document(habit.id)
+        val weeklyGoal = habit.weeklyGoal.coerceIn(1, 7)
+        val payload = mapOf(
+            "name" to habit.name,
+            "completedDates" to habit.completedDates,
+            "streak" to habit.streak,
+            "icon" to habit.icon,
+            "weeklyGoal" to weeklyGoal,
+            "ownerId" to userId
         )
-    }
-    fun updateHabitName(id: String, name: String) {
-        collection.document(id).update(mapOf("name" to name))
-    }
-    fun updateHabitIcon(id: String, icon: String) {          // ÚJ
-        collection.document(id).update("icon", icon)
+        document.set(payload).await()
+        habitDao.upsert(habit.toEntity(userId))
     }
 
-    fun updateHabitWeeklyGoal(id: String, weeklyGoal: Int) { // ÚJ
-        collection.document(id).update("weeklyGoal", weeklyGoal)
+    suspend fun validateUniqueness(name: String, icon: String, excludeId: String?): String? = withContext(dispatcher) {
+        val normalized = name.trim().lowercase()
+        val cached = habitDao.getHabits()
+        if (cached.any { it.id != excludeId && it.name.trim().lowercase() == normalized }) {
+            return@withContext "Már létezik ilyen nevű szokás."
+        }
+        if (cached.any { it.id != excludeId && it.icon == icon }) {
+            return@withContext "Válassz másik ikont, ez már használatban van."
+        }
+        null
+    }
+
+    fun calculateStreak(completedDates: List<String>): Int {
+        if (completedDates.isEmpty()) return 0
+        val dates = completedDates.mapNotNull { runCatching { LocalDate.parse(it) }.getOrNull() }
+            .sortedDescending()
+        var streak = 0
+        var cursor = LocalDate.now()
+        for (date in dates) {
+            if (date == cursor) {
+                streak++
+                cursor = cursor.minusDays(1)
+            } else if (date.isBefore(cursor)) {
+                break
+            }
+        }
+        return streak
     }
 }

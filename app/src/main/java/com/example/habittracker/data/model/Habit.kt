@@ -7,5 +7,6 @@ data class Habit(
     val streak: Int = 0,
 
     val icon: String = "🔥",
-    val weeklyGoal: Int = 5
+    val weeklyGoal: Int = 5,
+    val ownerId: String = ""
 )

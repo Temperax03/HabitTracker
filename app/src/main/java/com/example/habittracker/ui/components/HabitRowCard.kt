@@ -17,14 +17,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.habittracker.data.model.Habit
-import com.example.habittracker.viewmodel.HabitViewModel
+
 import java.time.LocalDate
 
 @Composable
 fun HabitRowCard(
     habit: Habit,
-    viewModel: HabitViewModel,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onToggleToday: () -> Unit
 ) {
     val today = LocalDate.now().toString()
     val isCompletedToday = remember(habit.completedDates) { habit.completedDates.contains(today) }
@@ -80,19 +80,8 @@ fun HabitRowCard(
 
                 // Kerek pipa – mai nap toggle
                 Box(
-                    modifier = Modifier.size(34.dp).background(bg, CircleShape).clickable {
-                        val newDates = habit.completedDates.toMutableList()
-                        var newStreak = habit.streak
-                        val yesterday = LocalDate.now().minusDays(1).toString()
-                        if (!isCompletedToday) {
-                            newDates.add(today)
-                            newStreak = if (habit.completedDates.contains(yesterday)) newStreak + 1 else 1
-                        } else {
-                            newDates.remove(today)
-                            newStreak = 0
-                        }
-                        viewModel.updateHabit(habit, newDates, newStreak)
-                    }.padding(6.dp),
+                    modifier = Modifier.size(34.dp).background(bg, CircleShape).clickable { onToggleToday() }.padding(6.dp),
+
                     contentAlignment = Alignment.Center
                 ) {
                     if (isCompletedToday) {
@@ -116,6 +105,8 @@ fun HabitRowCard(
         }
     }
 }
+
+
 
 private fun lastNDays(n: Int): List<LocalDate> {
     val today = LocalDate.now()

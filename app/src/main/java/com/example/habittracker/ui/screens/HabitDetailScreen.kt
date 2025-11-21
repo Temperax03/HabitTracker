@@ -23,13 +23,17 @@ import com.example.habittracker.viewmodel.HabitViewModel
 @Composable
 fun HabitDetailScreen(
     habitId: String,
-    viewModel: HabitViewModel = viewModel(),
+    viewModel: HabitViewModel = viewModel(factory = HabitViewModel.Factory),
     onBack: () -> Unit
 ) {
     val habit = viewModel.habits.firstOrNull { it.id == habitId }
     var name by remember(habit) { mutableStateOf(habit?.name.orEmpty()) }
     var icon by remember(habit) { mutableStateOf(habit?.icon ?: "🔥") }
     var weeklyGoal by remember(habit) { mutableStateOf((habit?.weeklyGoal ?: 5).toFloat()) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(viewModel.errorMessage) {
+        viewModel.errorMessage?.let { snackbarHostState.showSnackbar(it) }
+    }
 
     Scaffold(
         topBar = {
@@ -42,15 +46,13 @@ fun HabitDetailScreen(
                     IconButton(onClick = {
                         habit ?: return@IconButton
                         if (name.isNotBlank()) {
-                            viewModel.updateHabitName(habit.id, name.trim())
-                            viewModel.updateHabitIcon(habit.id, icon)
-                            viewModel.updateHabitWeeklyGoal(habit.id, weeklyGoal.toInt())
-                            onBack()
+                            viewModel.updateHabitDetails(habit, name.trim(), icon, weeklyGoal.toInt())
                         }
                     }) { Icon(Icons.Outlined.Save, "Mentés") }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         if (habit == null) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {

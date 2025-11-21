@@ -17,7 +17,7 @@ import androidx.compose.ui.Alignment
 fun AddHabitBottomSheet(
     isOpen: Boolean,
     onDismiss: () -> Unit,
-    onSave: (name: String, icon: String, weeklyGoal: Int) -> Unit, // ⬅️ BŐVÍTETT
+    onSave: (name: String, icon: String, weeklyGoal: Int) -> Unit,
     initialText: String = ""
 ) {
     if (!isOpen) return
@@ -91,10 +91,13 @@ fun AddHabitBottomSheet(
                         when {
                             name.isEmpty() -> error = "A név nem lehet üres."
                             name.length < 2 -> error = "Legalább 2 karakter."
+                            weeklyGoal < 1f -> error = "A heti cél legyen legalább 1 nap."
                             else -> {
                                 onSave(name, selectedIcon, weeklyGoal.toInt())
                                 coroutineScope.launch { sheetState.hide() }.invokeOnCompletion {
-                                    text = ""; error = null; onDismiss()
+                                    text = ""
+                                    error = null
+                                    onDismiss()
                                 }
                             }
                         }

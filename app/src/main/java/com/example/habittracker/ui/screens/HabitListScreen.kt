@@ -47,9 +47,15 @@ import java.time.LocalDate
 @Composable
 fun HabitListScreen(
     navController: NavHostController,
-    viewModel: HabitViewModel = viewModel()
+    viewModel: HabitViewModel = viewModel(factory = HabitViewModel.Factory)
 ) {
     val habits = viewModel.habits
+    val isLoading = viewModel.isLoading
+    val errorMessage = viewModel.errorMessage
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { snackbarHostState.showSnackbar(it) }
+    }
     var isSheetOpen by remember { mutableStateOf(false) }
 
     AddHabitBottomSheet(
@@ -73,7 +79,8 @@ fun HabitListScreen(
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         if (habits.isEmpty()) {
             EmptyState(
@@ -107,8 +114,8 @@ fun HabitListScreen(
                             HabitViewMode.Daily -> {
                                 HabitRowCard(
                                     habit = habit,
-                                    viewModel = viewModel,
-                                    onClick = { navController.navigate("habit_detail/${habit.id}") }
+                                    onClick = { navController.navigate("habit_detail/${habit.id}") },
+                                    onToggleToday = { viewModel.toggleCompletion(habit) }
                                 )
                             }
                             HabitViewMode.Weekly -> {
@@ -127,6 +134,11 @@ fun HabitListScreen(
                     }
                 }
             }
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            }
         }
     }
 }
@@ -136,6 +148,7 @@ private enum class HabitViewMode(val label: String, val description: String) {
     Weekly(label = "Heti nézet", description = "Heti nézet kiválasztása"),
     Monthly(label = "Havi nézet", description = "Havi nézet kiválasztása")
 }
+
 
 @Composable
 private fun HabitViewModeSelector(
