@@ -9,7 +9,8 @@ fun HabitEntity.toDomain(): Habit = Habit(
     streak = streak,
     icon = icon,
     weeklyGoal = weeklyGoal,
-    ownerId = ownerId
+    ownerId = ownerId,
+    notificationTime = notificationTime
 )
 
 fun Habit.toEntity(ownerIdOverride: String = ownerId): HabitEntity = HabitEntity(
@@ -19,5 +20,6 @@ fun Habit.toEntity(ownerIdOverride: String = ownerId): HabitEntity = HabitEntity
     streak = streak,
     icon = icon,
     weeklyGoal = weeklyGoal,
-    ownerId = ownerIdOverride
+    ownerId = ownerIdOverride,
+    notificationTime = notificationTime
 )

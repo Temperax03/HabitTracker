@@ -8,5 +8,6 @@ data class Habit(
 
     val icon: String = "🔥",
     val weeklyGoal: Int = 5,
-    val ownerId: String = ""
+    val ownerId: String = "",
+    val notificationTime: String?
 )

@@ -45,6 +45,7 @@ android {
 
 dependencies {
     // Jetpack Compose navigacio
+    implementation("androidx.compose.material3:material3:1.4.0")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.navigation:navigation-compose:2.8.3")
     implementation(libs.androidx.core.ktx)

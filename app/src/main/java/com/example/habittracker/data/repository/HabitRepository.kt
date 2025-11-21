@@ -66,6 +66,7 @@ class HabitRepository(
                 val streak = doc.getLong("streak")?.toInt() ?: 0
                 val icon = doc.getString("icon") ?: "🔥"
                 val weeklyGoal = doc.getLong("weeklyGoal")?.toInt() ?: 5
+                val notificationTime = doc.getString("notificationTime")
 
                 Habit(
                     id = doc.id,
@@ -74,7 +75,8 @@ class HabitRepository(
                     streak = streak,
                     icon = icon,
                     weeklyGoal = weeklyGoal,
-                    ownerId = userId
+                    ownerId = userId,
+                    notificationTime = notificationTime
                 )
             }
 
@@ -95,7 +97,7 @@ class HabitRepository(
         val habitId = runCatching { habitCollection(userId).add(data).await().id }
             .getOrElse { habit.id.takeIf { id -> id.isNotBlank() } ?: UUID.randomUUID().toString() }
 
-        val storedHabit = habit.copy(id = habitId, weeklyGoal = weeklyGoal, ownerId = userId)
+        val storedHabit = habit.copy(id = habitId, weeklyGoal = weeklyGoal, ownerId = userId,)
         habitDao.upsert(storedHabit.toEntity(userId))
         storedHabit
     }
@@ -114,7 +116,8 @@ class HabitRepository(
             "streak" to habit.streak,
             "icon" to habit.icon,
             "weeklyGoal" to weeklyGoal,
-            "ownerId" to userId
+            "ownerId" to userId,
+            "notificationTime" to habit.notificationTime
         )
         document.set(payload).await()
         habitDao.upsert(habit.toEntity(userId))

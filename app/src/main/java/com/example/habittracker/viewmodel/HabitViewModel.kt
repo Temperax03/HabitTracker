@@ -16,6 +16,7 @@ import com.example.habittracker.data.repository.HabitRepository
 import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import com.example.habittracker.notifications.NotificationScheduler
 
 class HabitViewModel(
     application: Application,
@@ -32,6 +33,8 @@ class HabitViewModel(
 
     private var currentUserId: String? = null
     private var listener: ListenerRegistration? = null
+
+    private val notificationScheduler = NotificationScheduler(application)
 
     init {
         viewModelScope.launch { bootstrap() }
@@ -78,7 +81,7 @@ class HabitViewModel(
         )
     }
 
-    fun addHabit(name: String, icon: String = "🔥", weeklyGoal: Int = 5) {
+    fun addHabit(name: String, icon: String = "🔥", weeklyGoal: Int = 5, notificationTime: String? = null) {
         viewModelScope.launch {
             val userId = ensureUserAvailable() ?: return@launch
             errorMessage = null
@@ -94,16 +97,21 @@ class HabitViewModel(
             }
             val habit = Habit(
                 name = name.trim(),
-                completedDates = emptyList(),
-                streak = 0,
                 icon = icon,
                 weeklyGoal = sanitizedGoal,
-                ownerId = userId
+                ownerId = userId,
+                notificationTime = notificationTime
             )
             runCatching { repository.addHabit(userId, habit) }
                 .onSuccess { savedHabit ->
                     _habits.removeAll { it.id == savedHabit.id }
                     _habits.add(savedHabit)
+                    notificationScheduler.schedule(
+                        habitId = savedHabit.id,
+                        habitName = savedHabit.name,
+                        streak = savedHabit.streak,
+                        notificationTime = savedHabit.notificationTime
+                    )
                 }
                 .onFailure { errorMessage = it.message ?: "Nem sikerült menteni a szokást." }
         }
@@ -112,6 +120,7 @@ class HabitViewModel(
     fun deleteHabit(id: String) {
         viewModelScope.launch {
             val userId = ensureUserAvailable() ?: return@launch
+            notificationScheduler.cancel(id)
             runCatching { repository.deleteHabit(userId, id) }
                 .onFailure { errorMessage = it.message ?: "Nem sikerült törölni a szokást." }
         }
@@ -129,8 +138,16 @@ class HabitViewModel(
             }
             val sortedDates = dates.map { it }.sorted()
             val streak = repository.calculateStreak(sortedDates)
-            val updated = habit.copy(completedDates = sortedDates, streak = streak)
+            val updated = habit.copy(completedDates = sortedDates, streak = streak,)
             runCatching { repository.updateHabit(userId, updated) }
+                .onSuccess {
+                    notificationScheduler.schedule(
+                        habitId = updated.id,
+                        habitName = updated.name,
+                        streak = updated.streak,
+                        notificationTime = updated.notificationTime
+                    )
+                }
                 .onFailure { errorMessage = it.message ?: "Nem sikerült frissíteni a szokást." }
         }
     }
@@ -146,11 +163,19 @@ class HabitViewModel(
             val sanitizedGoal = weeklyGoal.coerceIn(1, 7)
             val updated = habit.copy(
                 name = name.trim(),
+                streak = repository.calculateStreak(habit.completedDates),
                 icon = icon,
                 weeklyGoal = sanitizedGoal,
-                streak = repository.calculateStreak(habit.completedDates)
             )
             runCatching { repository.updateHabit(userId, updated) }
+                .onSuccess {
+                    notificationScheduler.schedule(
+                        habitId = updated.id,
+                        habitName = updated.name,
+                        streak = updated.streak,
+                        notificationTime = updated.notificationTime
+                    )
+                }
                 .onFailure { errorMessage = it.message ?: "Nem sikerült frissíteni a szokást." }
         }
     }

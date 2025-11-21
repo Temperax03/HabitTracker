@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">HabitTracker</string>
+    <string name="notification_title">Ne felejtsd el a napi szokásaidat</string>
+    <string name="notification_body">%1$s - jelenlegi sorozat: %2$d nap</string>
+    <string name="notification_channel_name">Szokás emlékeztetők</string>
+    <string name="notification_channel_description">Napi értesítések a szokásaidról és sorozataidról</string>
+    <string name="notification_time_label">Értesítés időpontja</string>
+    <string name="notification_time_hint">Válaszd ki, mikor jelezzen az alkalmazás</string>
+    <string name="notification_option_none">Nincs értesítés</string>
 </resources>

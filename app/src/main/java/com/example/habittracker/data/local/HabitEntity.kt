@@ -11,5 +11,6 @@ data class HabitEntity(
     val weeklyGoal: Int,
     val completedDates: List<String>,
     val streak: Int,
-    val ownerId: String
+    val ownerId: String,
+    val notificationTime: String?
 )
