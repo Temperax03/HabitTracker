@@ -18,6 +18,8 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import com.example.habittracker.notifications.NotificationScheduler
 import com.example.habittracker.data.model.ReminderTime
+import androidx.compose.runtime.derivedStateOf
+import java.time.temporal.ChronoUnit
 class HabitViewModel(
     application: Application,
     private val repository: HabitRepository
@@ -30,7 +32,8 @@ class HabitViewModel(
         private set
     var errorMessage by mutableStateOf<String?>(null)
         private set
-
+    private val analyticsState = derivedStateOf { calculateAnalytics(_habits) }
+    val analytics: HabitAnalytics get() = analyticsState.value
     private var currentUserId: String? = null
     private var listener: ListenerRegistration? = null
 
@@ -195,6 +198,57 @@ class HabitViewModel(
     override fun onCleared() {
         listener?.remove()
         super.onCleared()
+    }
+    private fun calculateAnalytics(habits: List<Habit>): HabitAnalytics {
+        if (habits.isEmpty()) return HabitAnalytics()
+
+        val last7Days = generateDateRange(7)
+        val last30Days = generateDateRange(30)
+
+        fun Habit.countCompleted(days: List<LocalDate>): Int =
+            days.count { completedDates.contains(it.toString()) }
+
+        val total7 = habits.sumOf { it.countCompleted(last7Days) }
+        val total30 = habits.sumOf { it.countCompleted(last30Days) }
+
+        val weeklyProgress = habits.map { habit ->
+            val goal = habit.weeklyGoal.coerceAtLeast(1)
+            val completed = habit.countCompleted(last7Days)
+            (completed / goal.toFloat()).coerceIn(0f, 1f)
+        }
+        val averageWeeklyProgress = weeklyProgress.takeIf { it.isNotEmpty() }
+            ?.average()?.toFloat() ?: 0f
+
+        val monthlyProgress = habits.map { habit ->
+            habit.countCompleted(last30Days) / 30f
+        }
+        val averageMonthlyProgress = monthlyProgress.takeIf { it.isNotEmpty() }
+            ?.average()?.toFloat()?.coerceIn(0f, 1f) ?: 0f
+
+        val longestStreak = habits.maxOfOrNull { it.streak } ?: 0
+        val longestHabits = habits.filter { it.streak == longestStreak && longestStreak > 0 }
+
+        val attentionList = habits.mapNotNull { habit ->
+            val goal = habit.weeklyGoal.coerceAtLeast(1)
+            val completed = habit.countCompleted(last7Days)
+            val progress = (completed / goal.toFloat()).coerceIn(0f, 1f)
+            if (progress < 0.6f) HabitAttention(habit, progress) else null
+        }
+
+        return HabitAnalytics(
+            totalCheckinsLast7Days = total7,
+            totalCheckinsLast30Days = total30,
+            averageWeeklyGoalProgress = averageWeeklyProgress,
+            averageMonthlyCompletion = averageMonthlyProgress,
+            longestStreak = longestStreak,
+            longestStreakHabits = longestHabits,
+            habitsNeedingAttention = attentionList
+        )
+    }
+
+    private fun generateDateRange(days: Long): List<LocalDate> {
+        val today = LocalDate.now()
+        return (0 until days).map { today.minus(it, ChronoUnit.DAYS) }
     }
 
     companion object {

@@ -1,5 +1,6 @@
 package com.example.habittracker.ui.screens
 
+import androidx.compose.material.icons.outlined.Insights
 import android.content.Context
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
@@ -74,6 +75,9 @@ fun HabitListScreen(
             CenterAlignedTopAppBar(
                 title = { Text("Szokásaim") },
                 actions = {
+                    IconButton(onClick = { navController.navigate("analytics") }) {
+                        Icon(Icons.Outlined.Insights, contentDescription = "Elemzések")
+                    }
                     IconButton(onClick = { isSheetOpen = true }) {
                         Icon(Icons.Filled.Add, contentDescription = "Új szokás")
                     }

@@ -9,7 +9,7 @@ import androidx.navigation.navArgument
 import com.example.habittracker.ui.screens.HabitDetailScreen
 import com.example.habittracker.ui.screens.HabitListScreen
 import com.example.habittracker.ui.screens.WelcomeScreen
-
+import com.example.habittracker.ui.screens.AnalyticsScreen
 @Composable
 fun AppNavigation(navController: NavHostController, startDestination: String) {
     NavHost(navController = navController, startDestination = startDestination) {
@@ -23,7 +23,9 @@ fun AppNavigation(navController: NavHostController, startDestination: String) {
         composable("habit_list") {
             HabitListScreen(navController = navController)
 
-
+        }
+        composable("analytics") {
+            AnalyticsScreen(onBack = { navController.popBackStack() })
         }
         composable(
             route = "habit_detail/{habitId}",
