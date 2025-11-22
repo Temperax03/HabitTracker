@@ -35,7 +35,15 @@ class Converters {
                 ?.mapNotNull { it.toIntOrNull() }
                 ?: emptyList()
 
-            ReminderTime(time = time, days = days)
+            val timeParts = time.split(":")
+            val hour = timeParts.getOrNull(0)?.toIntOrNull() ?: return@mapNotNull null
+            val minute = timeParts.getOrNull(1)?.toIntOrNull() ?: return@mapNotNull null
+
+            ReminderTime(
+                hour = hour,
+                minute = minute,
+                days = days
+            )
         }
     }
 }

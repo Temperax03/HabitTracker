@@ -8,17 +8,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.habittracker.ui.screens.HabitDetailScreen
 import com.example.habittracker.ui.screens.HabitListScreen
-import com.example.habittracker.ui.screens.WelcomeScreen
 import com.example.habittracker.ui.screens.AnalyticsScreen
+import com.example.habittracker.ui.screens.OnboardingScreen
 @Composable
 fun AppNavigation(navController: NavHostController, startDestination: String) {
     NavHost(navController = navController, startDestination = startDestination) {
-        composable("welcome") {
-            WelcomeScreen(onStartClicked = {
-                navController.navigate("habit_list") {
-                    popUpTo("welcome") { inclusive = true }
-                }
-            })
+        composable("onboarding") {
+            OnboardingScreen(navController = navController)
+
         }
         composable("habit_list") {
             HabitListScreen(navController = navController)
