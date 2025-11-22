@@ -10,6 +10,16 @@ import com.example.habittracker.ui.screens.HabitDetailScreen
 import com.example.habittracker.ui.screens.HabitListScreen
 import com.example.habittracker.ui.screens.AnalyticsScreen
 import com.example.habittracker.ui.screens.OnboardingScreen
+
+private fun NavHostController.safeNavigateBack() {
+    val navigated = navigateUp()
+    if (!navigated) {
+        navigate("habit_list") {
+            launchSingleTop = true
+            popUpTo(graph.startDestinationId)
+        }
+    }
+}
 @Composable
 fun AppNavigation(navController: NavHostController, startDestination: String) {
     NavHost(navController = navController, startDestination = startDestination) {
@@ -22,7 +32,7 @@ fun AppNavigation(navController: NavHostController, startDestination: String) {
 
         }
         composable("analytics") {
-            AnalyticsScreen(onBack = { navController.popBackStack() })
+            AnalyticsScreen(onBack = { navController.safeNavigateBack() })
         }
         composable(
             route = "habit_detail/{habitId}",
@@ -31,7 +41,7 @@ fun AppNavigation(navController: NavHostController, startDestination: String) {
             val habitId = backStack.arguments?.getString("habitId") ?: return@composable
             HabitDetailScreen(
                 habitId = habitId,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.safeNavigateBack() }
             )
         }
     }

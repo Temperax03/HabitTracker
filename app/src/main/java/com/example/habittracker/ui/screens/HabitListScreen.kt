@@ -75,7 +75,11 @@ fun HabitListScreen(
             CenterAlignedTopAppBar(
                 title = { Text("Szokásaim") },
                 actions = {
-                    IconButton(onClick = { navController.navigate("analytics") }) {
+                    IconButton(onClick = {
+                        navController.navigate("analytics") {
+                            launchSingleTop = true
+                        }
+                    }) {
                         Icon(Icons.Outlined.Insights, contentDescription = "Elemzések")
                     }
                     IconButton(onClick = { isSheetOpen = true }) {
@@ -118,20 +122,32 @@ fun HabitListScreen(
                             HabitViewMode.Daily -> {
                                 HabitRowCard(
                                     habit = habit,
-                                    onClick = { navController.navigate("habit_detail/${habit.id}") },
+                                    onClick = {
+                                        navController.navigate("habit_detail/${habit.id}") {
+                                            launchSingleTop = true
+                                        }
+                                    },
                                     onToggleToday = { viewModel.toggleCompletion(habit) }
                                 )
                             }
                             HabitViewMode.Weekly -> {
                                 WeeklyHabitCard(
                                     habit = habit,
-                                    onClick = { navController.navigate("habit_detail/${habit.id}") }
+                                    onClick = {
+                                        navController.navigate("habit_detail/${habit.id}") {
+                                            launchSingleTop = true
+                                        }
+                                    }
                                 )
                             }
                             HabitViewMode.Monthly -> {
                                 MonthlyHabitCard(
                                     habit = habit,
-                                    onClick = { navController.navigate("habit_detail/${habit.id}") }
+                                    onClick = {
+                                        navController.navigate("habit_detail/${habit.id}") {
+                                            launchSingleTop = true
+                                        }
+                                    }
                                 )
                             }
                         }
