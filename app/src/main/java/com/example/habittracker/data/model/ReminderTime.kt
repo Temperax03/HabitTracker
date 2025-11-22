@@ -1,11 +1,19 @@
 package com.example.habittracker.data.model
 
 data class ReminderTime(
-    val hour: Int,
-    val minute: Int,
+    val time: String,
     val days: List<Int> = emptyList()
 ) {
+    constructor(hour: Int, minute: Int, days: List<Int> = emptyList()) : this(
+        time = "%02d:%02d".format(hour, minute),
+        days = days
+    )
 
-    val time: String
-        get() = "%02d:%02d".format(hour, minute)
+    val hour: Int
+        get() = time.substringBefore(":").toIntOrNull() ?: 0
+
+    val minute: Int
+        get() = time.substringAfter(":").toIntOrNull() ?: 0
 }
+
+
