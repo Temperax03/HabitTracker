@@ -1,9 +1,11 @@
 package com.example.habittracker.ui.screens
 
+import com.example.habittracker.viewmodel.HabitAnalytics
 import androidx.compose.material.icons.outlined.Insights
 import android.content.Context
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,6 +31,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -52,6 +55,7 @@ fun HabitListScreen(
 ) {
     val habits = viewModel.habits
     val isLoading = viewModel.isLoading
+    val analytics = viewModel.analytics
     val errorMessage = viewModel.errorMessage
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(errorMessage) {
@@ -104,6 +108,12 @@ fun HabitListScreen(
                     .padding(padding)
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
+                TodayOverviewCard(
+                    habits = habits,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(Modifier.height(8.dp))
                 HabitViewModeSelector(
                     selectedMode = selectedViewMode,
                     onModeSelected = { selectedViewMode = it }
@@ -162,6 +172,89 @@ fun HabitListScreen(
         }
     }
 }
+@Composable
+private fun TodayOverviewCard(habits: List<Habit>, modifier: Modifier = Modifier) {
+    val today = remember { LocalDate.now().toString() }
+    val completedCount = habits.count { it.completedDates.contains(today) }
+    val completionRatio = if (habits.isEmpty()) 0f else (completedCount / habits.size.toFloat()).coerceIn(0f, 1f)
+    val topStreak = habits.maxOfOrNull { it.streak } ?: 0
+
+    val isDark = isSystemInDarkTheme()
+    val colorScheme = MaterialTheme.colorScheme
+    val start = colorScheme.primary
+    val end = if (isDark) colorScheme.primaryContainer else colorScheme.secondary
+
+    val gradient = remember(completedCount, start, end) {
+        Brush.linearGradient(listOf(start, end))
+    }
+
+    Card(
+        modifier = modifier,
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(gradient)
+                    .padding(horizontal = 16.dp, vertical = 14.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = "Mai lendület",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                    Text(
+                        text = "$completedCount / ${habits.size} szokás kész",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                LinearProgressIndicator(
+                    progress = { completionRatio },
+                    modifier = Modifier.fillMaxWidth(),
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = "Aktív sorozat",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "$topStreak nap",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    AssistChip(
+                        onClick = {},
+                        label = { Text("Cél: ${habits.size} szokás") }
+                    )
+                }
+            }
+        }
+    }
+}
+
 
 private enum class HabitViewMode(val label: String, val description: String) {
     Daily(label = "Napi nézet", description = "Napi nézet kiválasztása"),

@@ -52,7 +52,7 @@ fun HabitRowCard(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Leading ikon (emoji körben)
+
                 Box(
                     modifier = Modifier.size(36.dp).background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
                     contentAlignment = Alignment.Center
@@ -60,7 +60,6 @@ fun HabitRowCard(
 
                 Spacer(Modifier.width(12.dp))
 
-                // Cím + streak chip (kattintva részletek)
                 Column(
                     modifier = Modifier.weight(1f).clickable { onClick() },
                     verticalArrangement = Arrangement.Center
@@ -73,12 +72,15 @@ fun HabitRowCard(
                         overflow = TextOverflow.Ellipsis
                     )
                     Spacer(Modifier.height(4.dp))
-                    AssistChip(onClick = {}, label = { Text("🔥 ${habit.streak}") })
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        AssistChip(onClick = {}, label = { Text("🔥 ${habit.streak}") })
+                        AssistChip(onClick = {}, label = { Text("🎯 ${habit.weeklyGoal}x / hét") })
+                    }
                 }
 
                 Spacer(Modifier.width(12.dp))
 
-                // Kerek pipa – mai nap toggle
+
                 Box(
                     modifier = Modifier.size(34.dp).background(bg, CircleShape).clickable { onToggleToday() }.padding(6.dp),
 
@@ -95,7 +97,7 @@ fun HabitRowCard(
                 }
             }
 
-            // Mini progress csík alul (heti célhoz igazítva)
+
             LinearProgressIndicator(
                 progress = { weeklyProgress },
                 modifier = Modifier.fillMaxWidth().height(3.dp),
