@@ -130,6 +130,9 @@ class HabitViewModel(
             val userId = ensureUserAvailable() ?: return@launch
             notificationScheduler.cancel(id)
             runCatching { repository.deleteHabit(userId, id) }
+                .onSuccess {
+                    _habits.removeAll { it.id == id }
+                }
                 .onFailure { errorMessage = it.message ?: "Nem sikerült törölni a szokást." }
         }
     }
@@ -149,6 +152,10 @@ class HabitViewModel(
             val updated = habit.copy(completedDates = sortedDates, streak = streak,)
             runCatching { repository.updateHabit(userId, updated) }
                 .onSuccess {
+                    val index = _habits.indexOfFirst { it.id == updated.id }
+                    if (index >= 0) {
+                        _habits[index] = updated
+                    }
                     notificationScheduler.schedule(
                         habitId = updated.id,
                         habitName = updated.name,
@@ -184,6 +191,10 @@ class HabitViewModel(
             )
             runCatching { repository.updateHabit(userId, updated) }
                 .onSuccess {
+                    val index = _habits.indexOfFirst { it.id == updated.id }
+                    if (index >= 0) {
+                        _habits[index] = updated
+                    }
                     notificationScheduler.schedule(
                         habitId = updated.id,
                         habitName = updated.name,

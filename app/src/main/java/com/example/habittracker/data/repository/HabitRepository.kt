@@ -146,7 +146,8 @@ class HabitRepository(
         )
 
         document.set(payload).await()
-        habitDao.upsert(habit.toEntity(userId))
+        val storedHabit = habit.copy(weeklyGoal = weeklyGoal)
+        habitDao.upsert(storedHabit.toEntity(userId))
     }
 
     suspend fun validateUniqueness(name: String, icon: String, excludeId: String?): String? = withContext(dispatcher) {
