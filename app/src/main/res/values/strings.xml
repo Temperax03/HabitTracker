@@ -12,4 +12,6 @@
     <string name="add_notification_time">Időpont hozzáadása</string>
     <string name="notification_every_day">Minden nap</string>
     <string name="remove_label">Eltávolítás</string>
+    <string name="notification_action_complete">Kész</string>
+    <string name="notification_action_snooze">Szundi</string>
 </resources>

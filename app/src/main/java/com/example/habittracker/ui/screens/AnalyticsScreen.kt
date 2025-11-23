@@ -1,5 +1,7 @@
 package com.example.habittracker.ui.screens
 
+
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -237,6 +239,15 @@ private fun AttentionListCard(attention: List<HabitAttention>) {
                         ) {
                             Text(text = "${item.habit.icon} ${item.habit.name}", style = MaterialTheme.typography.bodyLarge)
                             Text(text = "${(item.weeklyProgress * 100).roundToInt()}%", style = MaterialTheme.typography.labelMedium)
+                        }
+                        if (!item.habit.notes.isNullOrBlank()) {
+                            Text(
+                                text = item.habit.notes,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
                         LinearProgressIndicator(
                             progress = { item.weeklyProgress.coerceIn(0f, 1f) },

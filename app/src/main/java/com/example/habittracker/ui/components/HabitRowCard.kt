@@ -76,6 +76,16 @@ fun HabitRowCard(
                         AssistChip(onClick = {}, label = { Text("🔥 ${habit.streak}") })
                         AssistChip(onClick = {}, label = { Text("🎯 ${habit.weeklyGoal}x / hét") })
                     }
+                    if (!habit.notes.isNullOrBlank()) {
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = habit.notes,
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
                 }
 
                 Spacer(Modifier.width(12.dp))
@@ -106,7 +116,7 @@ fun HabitRowCard(
             )
         }
     }
-}
+
 
 
 

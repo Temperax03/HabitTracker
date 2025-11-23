@@ -69,6 +69,7 @@ class HabitRepository(
                 val weeklyGoal = doc.getLong("weeklyGoal")?.toInt() ?: 5
                 val reminderPayload = doc.get("reminders") as? List<Map<String, Any>>
                 val fallbackTime = doc.getString("notificationTime")
+                val notes = doc.getString("notes")
                 val reminders = reminderPayload?.mapNotNull { reminderMap ->
                     val time = reminderMap["time"] as? String ?: return@mapNotNull null
                     val days = (reminderMap["days"] as? List<*>)
@@ -87,7 +88,8 @@ class HabitRepository(
                     icon = icon,
                     weeklyGoal = weeklyGoal,
                     ownerId = userId,
-                    reminders = reminders
+                    reminders = reminders,
+                    notes = notes
                 )
             }
 
@@ -105,6 +107,7 @@ class HabitRepository(
             "weeklyGoal" to weeklyGoal,
             "ownerId" to userId,
             "notificationTime" to habit.reminders.firstOrNull()?.time,
+            "notes" to habit.notes,
             "reminders" to habit.reminders.map { reminder ->
                 mapOf(
                     "time" to reminder.time,
@@ -137,6 +140,7 @@ class HabitRepository(
             "weeklyGoal" to weeklyGoal,
             "ownerId" to userId,
             "notificationTime" to habit.reminders.firstOrNull()?.time,
+            "notes" to habit.notes,
             "reminders" to habit.reminders.map { reminder ->
                 mapOf(
                     "time" to reminder.time,
@@ -177,5 +181,23 @@ class HabitRepository(
             }
         }
         return streak
+    }
+    suspend fun toggleCompletionById(habitId: String, date: LocalDate = LocalDate.now()): Habit? = withContext(dispatcher) {
+        val habit = habitDao.getById(habitId)?.toDomain() ?: return@withContext null
+        val userId = ensureUserId()
+
+        val dates = habit.completedDates.toMutableSet()
+        val dateString = date.toString()
+        if (dates.contains(dateString)) {
+            dates.remove(dateString)
+        } else {
+            dates.add(dateString)
+        }
+
+        val sortedDates = dates.map { it }.sorted()
+        val streak = calculateStreak(sortedDates)
+        val updated = habit.copy(completedDates = sortedDates, streak = streak)
+        updateHabit(userId, updated)
+        updated
     }
 }

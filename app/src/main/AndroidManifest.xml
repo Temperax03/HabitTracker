@@ -27,6 +27,14 @@
             android:name=".notifications.NotificationReceiver"
             android:enabled="true"
             android:exported="false" />
+        <receiver
+            android:name=".notifications.QuickCheckInReceiver"
+            android:enabled="true"
+            android:exported="false" />
+        <receiver
+            android:name=".notifications.SnoozeReceiver"
+            android:enabled="true"
+            android:exported="false" />
     </application>
 
 </manifest>

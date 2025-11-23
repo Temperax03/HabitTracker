@@ -13,4 +13,5 @@ data class HabitEntity(
     val streak: Int,
     val ownerId: String,
     val reminders: List<ReminderTime>,
+    val notes: String?,
 )

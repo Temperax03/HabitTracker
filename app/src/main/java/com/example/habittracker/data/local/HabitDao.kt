@@ -21,4 +21,7 @@ interface HabitDao {
 
     @Query("DELETE FROM habits WHERE id = :habitId")
     suspend fun deleteById(habitId: String)
+
+    @Query("SELECT * FROM habits WHERE id = :habitId LIMIT 1")
+    suspend fun getById(habitId: String): HabitEntity?
 }

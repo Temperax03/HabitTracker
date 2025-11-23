@@ -40,6 +40,34 @@ class NotificationScheduler(
 
         }
     }
+    fun scheduleSnooze(
+        habitId: String,
+        habitName: String,
+        streak: Int,
+        reminder: ReminderTime,
+        delayMinutes: Long = 30
+    ): Result<Unit> {
+        return runCatching {
+            val triggerAt = LocalDateTime.now(clock)
+                .plusMinutes(delayMinutes)
+                .atZone(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli()
+
+            val requestCode = (habitId + reminder.time + reminder.days.sorted().joinToString(",") + "_snooze").hashCode()
+            val pendingIntent = PendingIntent.getBroadcast(
+                context,
+                requestCode,
+                buildIntent(context, habitId, habitName, streak, reminder),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            alarmManager.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                triggerAt,
+                pendingIntent
+            )
+        }
+    }
 
     private fun scheduleReminder(
         habitId: String,

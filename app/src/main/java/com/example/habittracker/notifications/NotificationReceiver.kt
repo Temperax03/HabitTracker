@@ -42,6 +42,29 @@ class NotificationReceiver : BroadcastReceiver() {
             tapIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+        val completeIntent = Intent(context, QuickCheckInReceiver::class.java).apply {
+            putExtra(KEY_HABIT_ID, habitId)
+        }
+        val completePendingIntent = PendingIntent.getBroadcast(
+            context,
+            (habitId + ACTION_COMPLETE).hashCode(),
+            completeIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val snoozeIntent = Intent(context, SnoozeReceiver::class.java).apply {
+            putExtra(KEY_HABIT_ID, habitId)
+            putExtra(KEY_HABIT_NAME, habitName)
+            putExtra(KEY_HABIT_STREAK, streak)
+            putExtra(KEY_NOTIFICATION_TIME, time)
+            putExtra(KEY_NOTIFICATION_DAYS, days.toIntArray())
+        }
+        val snoozePendingIntent = PendingIntent.getBroadcast(
+            context,
+            (habitId + ACTION_SNOOZE).hashCode(),
+            snoozeIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
 
         val contentText = context.getString(R.string.notification_body, habitName, streak)
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
@@ -51,6 +74,16 @@ class NotificationReceiver : BroadcastReceiver() {
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setContentIntent(tapPendingIntent)
             .setAutoCancel(true)
+            .addAction(
+                R.drawable.ic_check,
+                context.getString(R.string.notification_action_complete),
+                completePendingIntent
+            )
+            .addAction(
+                R.drawable.ic_notification,
+                context.getString(R.string.notification_action_snooze),
+                snoozePendingIntent
+            )
             .build()
 
         NotificationManagerCompat.from(context).notify(habitId.hashCode(), notification)
@@ -129,5 +162,7 @@ class NotificationReceiver : BroadcastReceiver() {
         const val KEY_HABIT_STREAK = "habit_streak"
         const val KEY_NOTIFICATION_TIME = "notification_time"
         const val KEY_NOTIFICATION_DAYS = "notification_days"
+        private const val ACTION_COMPLETE = "action_complete"
+        private const val ACTION_SNOOZE = "action_snooze"
     }
 }

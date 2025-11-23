@@ -39,6 +39,7 @@ fun HabitDetailScreen(
     val reminders = remember(habit) {
         mutableStateListOf<ReminderTime>().apply { addAll(habit?.reminders ?: emptyList()) }
     }
+    var notes by remember(habit) { mutableStateOf(habit?.notes.orEmpty()) }
     var selectedDays by remember(habit) { mutableStateOf(setOf<DayOfWeek>()) }
     val context = LocalContext.current
     fun showTimePicker() {
@@ -75,7 +76,8 @@ fun HabitDetailScreen(
                                 name.trim(),
                                 icon,
                                 weeklyGoal.toInt(),
-                                reminders.toList()
+                                reminders.toList(),
+                                notes
                             )
                         }
                     }) { Icon(Icons.Outlined.Save, "Mentés") }
@@ -100,6 +102,15 @@ fun HabitDetailScreen(
                 onValueChange = { if (it.length <= 100) name = it },
                 label = { Text("Szokás neve") },
                 modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = notes,
+                onValueChange = { if (it.length <= 250) notes = it },
+                label = { Text("Jegyzet") },
+                modifier = Modifier.fillMaxWidth(),
+                supportingText = { Text("${notes.length}/250 karakter") },
+                minLines = 3,
+                maxLines = 5
             )
 
             // Ikonválasztó

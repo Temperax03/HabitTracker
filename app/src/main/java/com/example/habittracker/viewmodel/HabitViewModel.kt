@@ -29,7 +29,8 @@ class HabitViewModel(
         val name: String,
         val icon: String = "🔥",
         val weeklyGoal: Int = 5,
-        val reminders: List<ReminderTime> = emptyList()
+        val reminders: List<ReminderTime> = emptyList(),
+        val notes: String? = null
     )
     private val _habits = mutableStateListOf<Habit>()
     val habits: List<Habit> get() = _habits
@@ -94,9 +95,10 @@ class HabitViewModel(
         name: String,
         icon: String = "🔥",
         weeklyGoal: Int = 5,
-        reminders: List<ReminderTime> = emptyList()
+        reminders: List<ReminderTime> = emptyList(),
+        notes: String? = null
     ) {
-        viewModelScope.launch { addHabitInternal(name, icon, weeklyGoal, reminders) }
+        viewModelScope.launch { addHabitInternal(name, icon, weeklyGoal, reminders, notes) }
     }
 
     suspend fun addHabitsBlocking(habits: List<HabitInput>) {
@@ -105,7 +107,8 @@ class HabitViewModel(
                 name = habit.name,
                 icon = habit.icon,
                 weeklyGoal = habit.weeklyGoal,
-                reminders = habit.reminders
+                reminders = habit.reminders,
+                notes = habit.notes
             )
 
         }
@@ -114,7 +117,8 @@ class HabitViewModel(
         name: String,
         icon: String,
         weeklyGoal: Int,
-        reminders: List<ReminderTime>
+        reminders: List<ReminderTime>,
+        notes: String?
     ) {
         val userId = ensureUserAvailable() ?: return
         errorMessage = null
@@ -133,7 +137,8 @@ class HabitViewModel(
             icon = icon,
             weeklyGoal = sanitizedGoal,
             ownerId = userId,
-            reminders = reminders
+            reminders = reminders,
+            notes = notes?.trim()?.takeIf { it.isNotEmpty() }
         )
         runCatching { repository.addHabit(userId, habit) }
             .onSuccess { savedHabit ->
@@ -200,7 +205,8 @@ class HabitViewModel(
         name: String,
         icon: String,
         weeklyGoal: Int,
-        reminders: List<ReminderTime>
+        reminders: List<ReminderTime>,
+        notes: String?
     ) {
         viewModelScope.launch {
             val userId = ensureUserAvailable() ?: return@launch
@@ -215,7 +221,8 @@ class HabitViewModel(
                 streak = repository.calculateStreak(habit.completedDates),
                 icon = icon,
                 weeklyGoal = sanitizedGoal,
-                reminders = reminders
+                reminders = reminders,
+                notes = notes?.trim()?.takeIf { it.isNotEmpty() }
             )
             runCatching { repository.updateHabit(userId, updated) }
                 .onSuccess {
