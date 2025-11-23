@@ -57,6 +57,7 @@ import androidx.navigation.NavHostController
 import com.example.habittracker.data.model.ReminderTime
 import com.example.habittracker.viewmodel.HabitViewModel
 import kotlinx.coroutines.launch
+import com.example.habittracker.viewmodel.HabitViewModel.HabitInput
 
 private data class OnboardingPage(
     val title: String,
@@ -223,22 +224,24 @@ fun OnboardingScreen(
                     Button(
                         onClick = {
                             if (isLastPage) {
-                                val selectedPresets = presetHabits.filter { selectedHabitNames.contains(it.name) }
-                                selectedPresets.forEach { preset ->
-                                    val reminders = preset.reminderTime?.let { listOf(it) } ?: emptyList()
-                                    viewModel.addHabit(
-                                        name = preset.name,
-                                        icon = preset.icon,
-                                        weeklyGoal = preset.weeklyGoal,
-                                        reminders = reminders
-                                    )
-                                }
-                                context.getSharedPreferences("HabitPrefs", android.content.Context.MODE_PRIVATE).edit {
-                                    putBoolean("onboarding_complete", true)
-                                    putBoolean("hasHabits", selectedPresets.isNotEmpty())
-                                }
-                                navController.navigate("habit_list") {
-                                    popUpTo("onboarding") { inclusive = true }
+                                scope.launch {
+                                    val selectedPresets = presetHabits.filter { selectedHabitNames.contains(it.name) }
+                                    val habitInputs = selectedPresets.map { preset ->
+                                        HabitInput(
+                                            name = preset.name,
+                                            icon = preset.icon,
+                                            weeklyGoal = preset.weeklyGoal,
+                                            reminders = preset.reminderTime?.let { listOf(it) } ?: emptyList()
+                                        )
+                                    }
+                                    viewModel.addHabitsBlocking(habitInputs)
+                                    context.getSharedPreferences("HabitPrefs", android.content.Context.MODE_PRIVATE).edit {
+                                        putBoolean("onboarding_complete", true)
+                                        putBoolean("hasHabits", selectedPresets.isNotEmpty())
+                                    }
+                                    navController.navigate("habit_list") {
+                                        popUpTo("onboarding") { inclusive = true }
+                                    }
                                 }
                             } else {
                                 scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }

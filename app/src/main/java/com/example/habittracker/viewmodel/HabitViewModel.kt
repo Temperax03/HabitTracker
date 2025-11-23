@@ -25,6 +25,12 @@ class HabitViewModel(
     private val repository: HabitRepository
 ) : AndroidViewModel(application) {
 
+    data class HabitInput(
+        val name: String,
+        val icon: String = "🔥",
+        val weeklyGoal: Int = 5,
+        val reminders: List<ReminderTime> = emptyList()
+    )
     private val _habits = mutableStateListOf<Habit>()
     val habits: List<Habit> get() = _habits
 
@@ -90,39 +96,57 @@ class HabitViewModel(
         weeklyGoal: Int = 5,
         reminders: List<ReminderTime> = emptyList()
     ) {
-        viewModelScope.launch {
-            val userId = ensureUserAvailable() ?: return@launch
-            errorMessage = null
-            val sanitizedGoal = weeklyGoal.coerceIn(1, 7)
-            val validationError = repository.validateUniqueness(name, icon, excludeId = null)
-            if (name.isBlank()) {
-                errorMessage = "A név nem lehet üres."
-                return@launch
-            }
-            if (validationError != null) {
-                errorMessage = validationError
-                return@launch
-            }
-            val habit = Habit(
-                name = name.trim(),
-                icon = icon,
-                weeklyGoal = sanitizedGoal,
-                ownerId = userId,
-                reminders = reminders
+        viewModelScope.launch { addHabitInternal(name, icon, weeklyGoal, reminders) }
+    }
+
+    suspend fun addHabitsBlocking(habits: List<HabitInput>) {
+        habits.forEach { habit ->
+            addHabitInternal(
+                name = habit.name,
+                icon = habit.icon,
+                weeklyGoal = habit.weeklyGoal,
+                reminders = habit.reminders
             )
-            runCatching { repository.addHabit(userId, habit) }
-                .onSuccess { savedHabit ->
-                    _habits.removeAll { it.id == savedHabit.id }
-                    _habits.add(savedHabit)
-                    notificationScheduler.schedule(
-                        habitId = savedHabit.id,
-                        habitName = savedHabit.name,
-                        streak = savedHabit.streak,
-                        reminders = savedHabit.reminders
-                    )
-                }
-                .onFailure { errorMessage = it.message ?: "Nem sikerült menteni a szokást." }
+
         }
+    }
+    private suspend fun addHabitInternal(
+        name: String,
+        icon: String,
+        weeklyGoal: Int,
+        reminders: List<ReminderTime>
+    ) {
+        val userId = ensureUserAvailable() ?: return
+        errorMessage = null
+        val sanitizedGoal = weeklyGoal.coerceIn(1, 7)
+        val validationError = repository.validateUniqueness(name, icon, excludeId = null)
+        if (name.isBlank()) {
+            errorMessage = "A név nem lehet üres."
+            return
+        }
+        if (validationError != null) {
+            errorMessage = validationError
+            return
+        }
+        val habit = Habit(
+            name = name.trim(),
+            icon = icon,
+            weeklyGoal = sanitizedGoal,
+            ownerId = userId,
+            reminders = reminders
+        )
+        runCatching { repository.addHabit(userId, habit) }
+            .onSuccess { savedHabit ->
+                _habits.removeAll { it.id == savedHabit.id }
+                _habits.add(savedHabit)
+                notificationScheduler.schedule(
+                    habitId = savedHabit.id,
+                    habitName = savedHabit.name,
+                    streak = savedHabit.streak,
+                    reminders = savedHabit.reminders
+                )
+            }
+            .onFailure { errorMessage = it.message ?: "Nem sikerült menteni a szokást." }
     }
 
     fun deleteHabit(id: String) {
