@@ -1,6 +1,10 @@
 package com.example.habittracker.ui.screens
 
-
+import androidx.compose.material.icons.outlined.Insights
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Insights
 import android.content.Context
 import androidx.compose.animation.animateColorAsState
@@ -124,14 +128,49 @@ fun HabitListScreen(
                 // 3. Ág: van adat
                 else -> {
                     var selectedViewMode by rememberSaveable { mutableStateOf(HabitViewMode.Daily) }
+                    var searchQuery by rememberSaveable { mutableStateOf("") }
+                    var statusFilter by rememberSaveable { mutableStateOf(HabitStatusFilter.All) }
+                    var reminderFilter by rememberSaveable { mutableStateOf(ReminderFilter.All) }
+
+                    val today = remember { LocalDate.now().toString() }
+                    val filteredHabits = habits.filter { habit ->
+                        val matchesSearch = habit.name.contains(searchQuery, ignoreCase = true)
+                        val matchesStatus = when (statusFilter) {
+                            HabitStatusFilter.All -> true
+                            HabitStatusFilter.CompletedToday -> habit.completedDates.contains(today)
+                            HabitStatusFilter.PendingToday -> !habit.completedDates.contains(today)
+                        }
+                        val matchesReminder = when (reminderFilter) {
+                            ReminderFilter.All -> true
+                            ReminderFilter.WithReminder -> habit.reminders.isNotEmpty()
+                            ReminderFilter.WithoutReminder -> habit.reminders.isEmpty()
+                        }
+
+                        matchesSearch && matchesStatus && matchesReminder
+                    }
 
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(horizontal = 16.dp, vertical = 8.dp)
                     ) {
+                        SearchAndFilterBar(
+                            searchQuery = searchQuery,
+                            onQueryChange = { searchQuery = it },
+                            statusFilter = statusFilter,
+                            onStatusChange = { statusFilter = it },
+                            reminderFilter = reminderFilter,
+                            onReminderChange = { reminderFilter = it },
+                            onReset = {
+                                searchQuery = ""
+                                statusFilter = HabitStatusFilter.All
+                                reminderFilter = ReminderFilter.All
+                            }
+                        )
+
+                        Spacer(Modifier.height(12.dp))
                         TodayOverviewCard(
-                            habits = habits,
+                            habits = filteredHabits,
                             modifier = Modifier.fillMaxWidth()
                         )
 
@@ -150,7 +189,7 @@ fun HabitListScreen(
                                 .weight(1f),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            items(habits, key = { it.id }) { habit ->
+                            items(filteredHabits, key = { it.id }) { habit ->
                                 when (selectedViewMode) {
                                     HabitViewMode.Daily -> {
                                         HabitRowCard(
@@ -286,14 +325,171 @@ private fun TodayOverviewCard(habits: List<Habit>, modifier: Modifier = Modifier
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SearchAndFilterBar(
+    searchQuery: String,
+    onQueryChange: (String) -> Unit,
+    statusFilter: HabitStatusFilter,
+    onStatusChange: (HabitStatusFilter) -> Unit,
+    reminderFilter: ReminderFilter,
+    onReminderChange: (ReminderFilter) -> Unit,
+    onReset: () -> Unit
+) {
+    val hasActiveFilters = searchQuery.isNotBlank() ||
+            statusFilter != HabitStatusFilter.All ||
+            reminderFilter != ReminderFilter.All
+    var isMenuExpanded by remember { mutableStateOf(false) }
 
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = onQueryChange,
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = "Keresés") },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { onQueryChange("") }) {
+                            Icon(
+                                imageVector = Icons.Outlined.Close,
+                                contentDescription = "Keresés törlése"
+                            )
+                        }
+                    }
+                },
+                placeholder = { Text("Keresés név szerint") }
+            )
+
+            Box {
+                BadgedBox(badge = { if (hasActiveFilters) Badge() }) {
+                    IconButton(onClick = { isMenuExpanded = true }) {
+                        Icon(
+                            imageVector = Icons.Outlined.FilterList,
+                            contentDescription = "Szűrők",
+                            tint = if (hasActiveFilters) MaterialTheme.colorScheme.primary else LocalContentColor.current
+                        )
+                    }
+                }
+
+                DropdownMenu(
+                    expanded = isMenuExpanded,
+                    onDismissRequest = { isMenuExpanded = false }
+                ) {
+                    Text(
+                        text = "Státusz",
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Összes") },
+                        onClick = {
+                            onStatusChange(HabitStatusFilter.All)
+                            isMenuExpanded = false
+                        },
+                        leadingIcon = {
+                            if (statusFilter == HabitStatusFilter.All) {
+                                Icon(Icons.Outlined.Check, contentDescription = null)
+                            }
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Ma teljesített") },
+                        onClick = {
+                            onStatusChange(HabitStatusFilter.CompletedToday)
+                            isMenuExpanded = false
+                        },
+                        leadingIcon = {
+                            if (statusFilter == HabitStatusFilter.CompletedToday) {
+                                Icon(Icons.Outlined.Check, contentDescription = null)
+                            }
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Még hátra van mára") },
+                        onClick = {
+                            onStatusChange(HabitStatusFilter.PendingToday)
+                            isMenuExpanded = false
+                        },
+                        leadingIcon = {
+                            if (statusFilter == HabitStatusFilter.PendingToday) {
+                                Icon(Icons.Outlined.Check, contentDescription = null)
+                            }
+                        }
+                    )
+
+                    Divider()
+                    Text(
+                        text = "Emlékeztetők",
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Összes szokás") },
+                        onClick = {
+                            onReminderChange(ReminderFilter.All)
+                            isMenuExpanded = false
+                        },
+                        leadingIcon = {
+                            if (reminderFilter == ReminderFilter.All) {
+                                Icon(Icons.Outlined.Check, contentDescription = null)
+                            }
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Van emlékeztető") },
+                        onClick = {
+                            onReminderChange(ReminderFilter.WithReminder)
+                            isMenuExpanded = false
+                        },
+                        leadingIcon = {
+                            if (reminderFilter == ReminderFilter.WithReminder) {
+                                Icon(Icons.Outlined.Check, contentDescription = null)
+                            }
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Nincs emlékeztető") },
+                        onClick = {
+                            onReminderChange(ReminderFilter.WithoutReminder)
+                            isMenuExpanded = false
+                        },
+                        leadingIcon = {
+                            if (reminderFilter == ReminderFilter.WithoutReminder) {
+                                Icon(Icons.Outlined.Check, contentDescription = null)
+                            }
+                        }
+                    )
+                }
+            }
+        }
+
+        if (hasActiveFilters) {
+            TextButton(
+                onClick = onReset,
+                modifier = Modifier.align(Alignment.End)
+            ) {
+                Text("Visszaállítás")
+            }
+        }
+    }
+}
 private enum class HabitViewMode(val label: String, val description: String) {
     Daily(label = "Napi nézet", description = "Napi nézet kiválasztása"),
     Weekly(label = "Heti nézet", description = "Heti nézet kiválasztása"),
     Monthly(label = "Havi nézet", description = "Havi nézet kiválasztása")
 }
 
+private enum class HabitStatusFilter { All, CompletedToday, PendingToday }
 
+private enum class ReminderFilter { All, WithReminder, WithoutReminder }
 @Composable
 private fun HabitViewModeSelector(
     selectedMode: HabitViewMode,
