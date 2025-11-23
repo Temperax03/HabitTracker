@@ -10,21 +10,35 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import androidx.core.content.edit
 import com.example.habittracker.data.model.ReminderTime
+import java.time.Clock
 import java.time.DayOfWeek
 
-class NotificationScheduler(private val context: Context) {
+class NotificationScheduler(
+    private val context: Context,
+    private val clock: Clock = Clock.systemDefaultZone()
+) {
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
     private val prefs = context.getSharedPreferences("notification_scheduler", Context.MODE_PRIVATE)
     private val formatter = DateTimeFormatter.ofPattern("HH:mm")
-    fun schedule(habitId: String, habitName: String, streak: Int, reminders: List<ReminderTime>) {
+    fun schedule(
+    habitId: String,
+    habitName: String,
+    streak: Int,
+    reminders: List<ReminderTime>
+    ): Result<Unit> {
         cancel(habitId)
-        if (reminders.isEmpty()) return
+        if (reminders.isEmpty()) return Result.success(Unit)
 
-        val requestCodes = reminders.mapNotNull { reminder ->
-            scheduleReminder(habitId, habitName, streak, reminder)
+        return runCatching {
+            val requestCodes = reminders.map { reminder ->
+                scheduleReminder(habitId, habitName, streak, reminder).getOrThrow()
+            }
+            if (requestCodes.isEmpty()) {
+                throw IllegalArgumentException("No reminders were scheduled")
+            }
+            prefs.edit { putString(habitId, requestCodes.joinToString(",")) }
 
         }
-        prefs.edit { putString(habitId, requestCodes.joinToString(",")) }
     }
 
     private fun scheduleReminder(
@@ -32,21 +46,23 @@ class NotificationScheduler(private val context: Context) {
         habitName: String,
         streak: Int,
         reminder: ReminderTime
-    ): Int? {
-        val triggerAt = computeNextTrigger(reminder) ?: return null
-        val requestCode = buildRequestCode(habitId, reminder)
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            requestCode,
-            buildIntent(context, habitId, habitName, streak, reminder),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        alarmManager.setExactAndAllowWhileIdle(
-            AlarmManager.RTC_WAKEUP,
-            triggerAt,
-            pendingIntent
-        )
-        return requestCode
+    ): Result<Int> {
+        return runCatching {
+            val triggerAt = computeNextTrigger(reminder)
+            val requestCode = buildRequestCode(habitId, reminder)
+            val pendingIntent = PendingIntent.getBroadcast(
+                context,
+                requestCode,
+                buildIntent(context, habitId, habitName, streak, reminder),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            alarmManager.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                triggerAt,
+                pendingIntent
+            )
+            requestCode
+        }
     }
 
     fun cancel(habitId: String) {
@@ -66,24 +82,22 @@ class NotificationScheduler(private val context: Context) {
         prefs.edit { remove(habitId) }
     }
 
-    private fun computeNextTrigger(reminder: ReminderTime): Long? {
-        return runCatching {
-            val time = LocalTime.parse(reminder.time, formatter)
-            val now = LocalDateTime.now()
-            val allowedDays = reminder.days.takeIf { it.isNotEmpty() }
-                ?.mapNotNull { runCatching { DayOfWeek.of(it) }.getOrNull() }
-                ?.toSet()
+    private fun computeNextTrigger(reminder: ReminderTime): Long {
+        val time = LocalTime.parse(reminder.time, formatter)
+        val now = LocalDateTime.now(clock)
+        val allowedDays = reminder.days.takeIf { it.isNotEmpty() }
+            ?.map { DayOfWeek.of(it) }
+            ?.toSet()
 
-            for (offset in 0..13) {
-                val candidateDate = now.toLocalDate().plusDays(offset.toLong())
-                val dayMatches = allowedDays?.contains(candidateDate.dayOfWeek) ?: true
-                val candidateDateTime = candidateDate.atTime(time)
-                if (dayMatches && candidateDateTime.isAfter(now)) {
-                    return candidateDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                }
+        for (offset in 0..13) {
+            val candidateDate = now.toLocalDate().plusDays(offset.toLong())
+            val dayMatches = allowedDays?.contains(candidateDate.dayOfWeek) ?: true
+            val candidateDateTime = candidateDate.atTime(time)
+            if (dayMatches && candidateDateTime.isAfter(now)) {
+                return candidateDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
             }
-            null
-        }.getOrNull()
+        }
+        throw IllegalArgumentException("Reminder timenak${reminder.time} nincs tobb elofordulasa")
     }
 
     private fun buildRequestCode(habitId: String, reminder: ReminderTime): Int {

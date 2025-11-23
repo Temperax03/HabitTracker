@@ -144,7 +144,9 @@ class HabitViewModel(
                     habitName = savedHabit.name,
                     streak = savedHabit.streak,
                     reminders = savedHabit.reminders
-                )
+                ).onFailure { throwable ->
+                    errorMessage = throwable.message ?: "Nem sikerült időzíteni az emlékeztetőt."
+                }
             }
             .onFailure { errorMessage = it.message ?: "Nem sikerült menteni a szokást." }
     }
@@ -185,7 +187,9 @@ class HabitViewModel(
                         habitName = updated.name,
                         streak = updated.streak,
                         reminders = updated.reminders
-                    )
+                    ).onFailure { throwable ->
+                        errorMessage = throwable.message ?: "Nem sikerült időzíteni az emlékeztetőt."
+                    }
                 }
                 .onFailure { errorMessage = it.message ?: "Nem sikerült frissíteni a szokást." }
         }
@@ -224,7 +228,9 @@ class HabitViewModel(
                         habitName = updated.name,
                         streak = updated.streak,
                         reminders = updated.reminders
-                    )
+                    ).onFailure { throwable ->
+                        errorMessage = throwable.message ?: "Nem sikerült időzíteni az emlékeztetőt."
+                    }
                 }
                 .onFailure { errorMessage = it.message ?: "Nem sikerült frissíteni a szokást." }
         }
