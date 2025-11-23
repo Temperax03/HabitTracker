@@ -87,25 +87,26 @@ fun HabitRowCard(
 
                         Spacer(Modifier.width(12.dp))
 
-                        Column(modifier = Modifier.weight(1f)) {
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                text = habit.name,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontSize = 20.sp,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.fillMaxWidth()
+                            )
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Text(
-                                    text = habit.name,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontSize = 20.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f)
-                                )
+
                                 StatBadge(label = "🔥 ${habit.streak}")
                                 StatBadge(label = "🎯 ${habit.weeklyGoal}x / hét")
                             }
 
                             if (!habit.notes.isNullOrBlank()) {
-                                Spacer(Modifier.height(6.dp))
+
                                 Text(
                                     text = habit.notes,
                                     style = MaterialTheme.typography.labelSmall,
