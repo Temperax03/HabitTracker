@@ -16,7 +16,10 @@ private fun NavHostController.safeNavigateBack() {
     if (!navigated) {
         navigate("habit_list") {
             launchSingleTop = true
-            popUpTo(graph.startDestinationId)
+            restoreState = true
+            popUpTo(graph.startDestinationId) {
+                saveState = true
+            }
         }
     }
 }

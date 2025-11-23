@@ -1,6 +1,6 @@
 package com.example.habittracker.ui.screens
 
-
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -149,7 +149,8 @@ fun OnboardingScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp),
+                .statusBarsPadding()
+                .padding(horizontal = 24.dp, vertical = 18.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
