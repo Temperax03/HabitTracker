@@ -20,6 +20,7 @@ import com.example.habittracker.notifications.NotificationScheduler
 import com.example.habittracker.data.model.ReminderTime
 import androidx.compose.runtime.derivedStateOf
 import java.time.temporal.ChronoUnit
+import com.example.habittracker.data.model.HabitIcons
 class HabitViewModel(
     application: Application,
     private val repository: HabitRepository
@@ -27,7 +28,7 @@ class HabitViewModel(
 
     data class HabitInput(
         val name: String,
-        val icon: String = "🔥",
+        val icon: String = HabitIcons.default,
         val weeklyGoal: Int = 5,
         val reminders: List<ReminderTime> = emptyList(),
         val notes: String? = null
@@ -93,7 +94,7 @@ class HabitViewModel(
 
     fun addHabit(
         name: String,
-        icon: String = "🔥",
+        icon: String = HabitIcons.default,
         weeklyGoal: Int = 5,
         reminders: List<ReminderTime> = emptyList(),
         notes: String? = null
@@ -123,7 +124,7 @@ class HabitViewModel(
         val userId = ensureUserAvailable() ?: return
         errorMessage = null
         val sanitizedGoal = weeklyGoal.coerceIn(1, 7)
-        val validationError = repository.validateUniqueness(name, icon, excludeId = null)
+        val validationError = repository.validateUniqueness(name, excludeId = null)
         if (name.isBlank()) {
             errorMessage = "A név nem lehet üres."
             return
@@ -210,7 +211,7 @@ class HabitViewModel(
     ) {
         viewModelScope.launch {
             val userId = ensureUserAvailable() ?: return@launch
-            val validationError = repository.validateUniqueness(name, icon, excludeId = habit.id)
+            val validationError = repository.validateUniqueness(name, excludeId = habit.id)
             if (validationError != null) {
                 errorMessage = validationError
                 return@launch
