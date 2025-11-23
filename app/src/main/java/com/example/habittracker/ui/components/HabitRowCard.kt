@@ -1,5 +1,14 @@
 package com.example.habittracker.ui.components
 
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -33,7 +42,8 @@ fun HabitRowCard(
     val last7 = remember { lastNDays(7) }
     val last7Done = last7.count { habit.completedDates.contains(it.toString()) }
     val weeklyGoal = habit.weeklyGoal.coerceIn(0, 7)
-    val weeklyProgress = if (weeklyGoal == 0) 0f else (last7Done / weeklyGoal.toFloat()).coerceIn(0f, 1f)
+    val weeklyProgress =
+        if (weeklyGoal == 0) 0f else (last7Done / weeklyGoal.toFloat()).coerceIn(0f, 1f)
 
     val bg by animateColorAsState(
         targetValue = if (isCompletedToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
@@ -49,60 +59,93 @@ fun HabitRowCard(
     ) {
         Column {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
 
-                Box(
-                    modifier = Modifier.size(36.dp).background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) { Text(habit.icon, fontSize = 18.sp) }
-
-                Spacer(Modifier.width(12.dp))
-
                 Column(
-                    modifier = Modifier.weight(1f).clickable { onClick() },
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onClick() },
                     verticalArrangement = Arrangement.Center
                 ) {
-                    Text(
-                        text = habit.name,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontSize = 18.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        AssistChip(onClick = {}, label = { Text("🔥 ${habit.streak}") })
-                        AssistChip(onClick = {}, label = { Text("🎯 ${habit.weeklyGoal}x / hét") })
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            modifier = Modifier.size(44.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = CircleShape
+                        ) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                Text(habit.icon, fontSize = 20.sp)
+                            }
+                        }
+
+                        Spacer(Modifier.width(12.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = habit.name,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontSize = 20.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                StatBadge(label = "🔥 ${habit.streak}")
+                                StatBadge(label = "🎯 ${habit.weeklyGoal}x / hét")
+                            }
+
+                            if (!habit.notes.isNullOrBlank()) {
+                                Spacer(Modifier.height(6.dp))
+                                Text(
+                                    text = habit.notes,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
                     }
-                    if (!habit.notes.isNullOrBlank()) {
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            text = habit.notes,
-                            style = MaterialTheme.typography.bodySmall,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
+
                 }
 
                 Spacer(Modifier.width(12.dp))
 
 
-                Box(
-                    modifier = Modifier.size(34.dp).background(bg, CircleShape).clickable { onToggleToday() }.padding(6.dp),
-
-                    contentAlignment = Alignment.Center
+                Surface(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clickable { onToggleToday() },
+                    shape = CircleShape,
+                    color = bg,
+                    tonalElevation = 0.dp
                 ) {
-                    if (isCompletedToday) {
-                        Icon(
-                            imageVector = Icons.Rounded.Check,
-                            contentDescription = "Kész",
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = scale; scaleY = scale }
-                        )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isCompletedToday) {
+                            androidx.compose.material3.Icon(
+                                imageVector = Icons.Rounded.Check,
+                                contentDescription = "Kész",
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .graphicsLayer { scaleX = scale; scaleY = scale }
+                            )
+                        }
                     }
                 }
             }
@@ -116,6 +159,21 @@ fun HabitRowCard(
             )
         }
     }
+}
+@Composable
+private fun StatBadge(label: String) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = CircleShape,
+        tonalElevation = 0.dp
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+        )
+    }
+}
 
 
 
