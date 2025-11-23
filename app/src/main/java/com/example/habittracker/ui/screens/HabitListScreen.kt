@@ -1,6 +1,6 @@
 package com.example.habittracker.ui.screens
 
-import com.example.habittracker.viewmodel.HabitAnalytics
+
 import androidx.compose.material.icons.outlined.Insights
 import android.content.Context
 import androidx.compose.animation.animateColorAsState
@@ -58,9 +58,11 @@ fun HabitListScreen(
     val analytics = viewModel.analytics
     val errorMessage = viewModel.errorMessage
     val snackbarHostState = remember { SnackbarHostState() }
+
     LaunchedEffect(errorMessage) {
         errorMessage?.let { snackbarHostState.showSnackbar(it) }
     }
+
     var isSheetOpen by remember { mutableStateOf(false) }
 
     AddHabitBottomSheet(
@@ -94,78 +96,107 @@ fun HabitListScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
-        if (habits.isEmpty()) {
-            EmptyState(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                onAddClick = { isSheetOpen = true }
-            )
-        } else {
-            var selectedViewMode by rememberSaveable { mutableStateOf(HabitViewMode.Daily) }
 
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                TodayOverviewCard(
-                    habits = habits,
-                    modifier = Modifier.fillMaxWidth()
-                )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            when {
+                // 1. Ág: még tölt, és még nincs adat
+                isLoading && habits.isEmpty() -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
 
-                Spacer(Modifier.height(8.dp))
-                HabitViewModeSelector(
-                    selectedMode = selectedViewMode,
-                    onModeSelected = { selectedViewMode = it }
-                )
+                // 2. Ág: nincs egyetlen szokás sem
+                habits.isEmpty() -> {
+                    EmptyState(
+                        modifier = Modifier.fillMaxSize(),
+                        onAddClick = { isSheetOpen = true }
+                    )
+                }
 
-                Spacer(Modifier.height(16.dp))
+                // 3. Ág: van adat
+                else -> {
+                    var selectedViewMode by rememberSaveable { mutableStateOf(HabitViewMode.Daily) }
 
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(habits, key = { it.id }) { habit ->
-                        when (selectedViewMode) {
-                            HabitViewMode.Daily -> {
-                                HabitRowCard(
-                                    habit = habit,
-                                    onClick = {
-                                        navController.navigate("habit_detail/${habit.id}") {
-                                            launchSingleTop = true
-                                        }
-                                    },
-                                    onToggleToday = { viewModel.toggleCompletion(habit) }
-                                )
-                            }
-                            HabitViewMode.Weekly -> {
-                                WeeklyHabitCard(
-                                    habit = habit,
-                                    onClick = {
-                                        navController.navigate("habit_detail/${habit.id}") {
-                                            launchSingleTop = true
-                                        }
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        TodayOverviewCard(
+                            habits = habits,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(Modifier.height(8.dp))
+
+                        HabitViewModeSelector(
+                            selectedMode = selectedViewMode,
+                            onModeSelected = { selectedViewMode = it }
+                        )
+
+                        Spacer(Modifier.height(16.dp))
+
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(habits, key = { it.id }) { habit ->
+                                when (selectedViewMode) {
+                                    HabitViewMode.Daily -> {
+                                        HabitRowCard(
+                                            habit = habit,
+                                            onClick = {
+                                                navController.navigate("habit_detail/${habit.id}") {
+                                                    launchSingleTop = true
+                                                }
+                                            },
+                                            onToggleToday = { viewModel.toggleCompletion(habit) }
+                                        )
                                     }
-                                )
-                            }
-                            HabitViewMode.Monthly -> {
-                                MonthlyHabitCard(
-                                    habit = habit,
-                                    onClick = {
-                                        navController.navigate("habit_detail/${habit.id}") {
-                                            launchSingleTop = true
-                                        }
+
+                                    HabitViewMode.Weekly -> {
+                                        WeeklyHabitCard(
+                                            habit = habit,
+                                            onClick = {
+                                                navController.navigate("habit_detail/${habit.id}") {
+                                                    launchSingleTop = true
+                                                }
+                                            }
+                                        )
                                     }
-                                )
+
+                                    HabitViewMode.Monthly -> {
+                                        MonthlyHabitCard(
+                                            habit = habit,
+                                            onClick = {
+                                                navController.navigate("habit_detail/${habit.id}") {
+                                                    launchSingleTop = true
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
-            if (isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+
+            if (isLoading && habits.isNotEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
                     CircularProgressIndicator()
                 }
             }
@@ -490,7 +521,7 @@ private fun EmptyState(
     Column(
         modifier = modifier.padding(24.dp),
         verticalArrangement = Arrangement.Center,
-        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text("Még nincs szokásod", style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(8.dp))

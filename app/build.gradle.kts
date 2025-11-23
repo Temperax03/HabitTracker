@@ -78,7 +78,6 @@ dependencies {
     implementation("androidx.room:room-ktx:2.6.1")
     kapt("androidx.room:room-compiler:2.6.1")
     testImplementation(libs.robolectric)
-    testImplementation("org.junit.jupiter:junit-jupiter:5.8.1")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1")
+    testImplementation("junit:junit:4.13.2")
 }
 
