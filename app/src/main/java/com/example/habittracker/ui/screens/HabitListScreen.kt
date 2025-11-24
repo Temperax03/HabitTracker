@@ -1,11 +1,12 @@
 package com.example.habittracker.ui.screens
 
+
 import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FilterList
-import androidx.compose.material.icons.outlined.Insights
+import kotlin.math.roundToInt
 import android.content.Context
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -154,6 +156,19 @@ fun HabitListScreen(
                             .fillMaxSize()
                             .padding(horizontal = 16.dp, vertical = 8.dp)
                     ) {
+                        TodayOverviewCard(
+                            habits = filteredHabits,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(Modifier.height(8.dp))
+
+                        HabitViewModeSelector(
+                            selectedMode = selectedViewMode,
+                            onModeSelected = { selectedViewMode = it }
+                        )
+
+                        Spacer(Modifier.height(8.dp))
                         SearchAndFilterBar(
                             searchQuery = searchQuery,
                             onQueryChange = { searchQuery = it },
@@ -169,19 +184,7 @@ fun HabitListScreen(
                         )
 
                         Spacer(Modifier.height(12.dp))
-                        TodayOverviewCard(
-                            habits = filteredHabits,
-                            modifier = Modifier.fillMaxWidth()
-                        )
 
-                        Spacer(Modifier.height(8.dp))
-
-                        HabitViewModeSelector(
-                            selectedMode = selectedViewMode,
-                            onModeSelected = { selectedViewMode = it }
-                        )
-
-                        Spacer(Modifier.height(16.dp))
 
                         LazyColumn(
                             modifier = Modifier
@@ -247,6 +250,7 @@ private fun TodayOverviewCard(habits: List<Habit>, modifier: Modifier = Modifier
     val today = remember { LocalDate.now().toString() }
     val completedCount = habits.count { it.completedDates.contains(today) }
     val completionRatio = if (habits.isEmpty()) 0f else (completedCount / habits.size.toFloat()).coerceIn(0f, 1f)
+    val completionPercent = (completionRatio * 100).roundToInt()
     val topStreak = habits.maxOfOrNull { it.streak } ?: 0
 
     val isDark = isSystemInDarkTheme()
@@ -254,46 +258,58 @@ private fun TodayOverviewCard(habits: List<Habit>, modifier: Modifier = Modifier
     val start = colorScheme.primary
     val end = if (isDark) colorScheme.primaryContainer else colorScheme.secondary
 
-    val gradient = remember(completedCount, start, end) {
-        Brush.linearGradient(listOf(start, end))
-    }
+
 
     Card(
         modifier = modifier,
-        shape = MaterialTheme.shapes.large,
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
+        val gradient = remember(completedCount, start, end) {
+            Brush.horizontalGradient(listOf(start, end))
+        }
         Column(modifier = Modifier.fillMaxWidth()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .height(4.dp)
                     .background(gradient)
-                    .padding(horizontal = 16.dp, vertical = 14.dp)
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        text = "Mai lendület",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                    Text(
-                        text = "$completedCount / ${habits.size} szokás kész",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
-            }
+            )
 
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = "Mai lendület",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "$completedCount / ${habits.size} szokás kész",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    AssistChip(
+                        onClick = {},
+                        label = { Text("Cél: ${habits.size}") }
+                    )
+                }
                 LinearProgressIndicator(
                     progress = { completionRatio },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp),
                     trackColor = MaterialTheme.colorScheme.surfaceVariant,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -311,13 +327,14 @@ private fun TodayOverviewCard(habits: List<Habit>, modifier: Modifier = Modifier
                         )
                         Text(
                             text = "$topStreak nap",
-                            style = MaterialTheme.typography.bodyLarge,
+                            style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
-                    AssistChip(
-                        onClick = {},
-                        label = { Text("Cél: ${habits.size} szokás") }
+                    Text(
+                        text = "$completionPercent% kész",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -350,8 +367,11 @@ private fun SearchAndFilterBar(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = onQueryChange,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = 44.dp),
                 singleLine = true,
+                textStyle = MaterialTheme.typography.bodySmall,
                 leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = "Keresés") },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
@@ -363,7 +383,7 @@ private fun SearchAndFilterBar(
                         }
                     }
                 },
-                placeholder = { Text("Keresés név szerint") }
+                placeholder = { Text("Keresés név szerint", style = MaterialTheme.typography.bodySmall) }
             )
 
             Box {
