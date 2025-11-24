@@ -1,5 +1,7 @@
 package com.example.habittracker.ui.components
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import com.example.habittracker.data.model.HabitIcons
 import android.app.TimePickerDialog
 import androidx.compose.foundation.layout.width
@@ -81,7 +83,13 @@ fun AddHabitBottomSheet(
 
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
-        Column(Modifier.fillMaxWidth().padding(20.dp)) {
+        val scrollState = rememberScrollState()
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .verticalScroll(scrollState)
+                .padding(20.dp)
+        ) {
             Text("Új szokás hozzáadása", style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(12.dp))
 
