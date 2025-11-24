@@ -1,15 +1,10 @@
 package com.example.habittracker.ui.screens
 
-
-import androidx.compose.material.icons.outlined.Insights
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.FilterList
-import kotlin.math.roundToInt
 import android.content.Context
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,21 +19,57 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CalendarViewWeek
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.FilterList
+import androidx.compose.material.icons.outlined.Insights
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Today
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -52,8 +83,10 @@ import com.example.habittracker.ui.components.HabitTimelineGrid
 import com.example.habittracker.ui.components.lastNDates
 import com.example.habittracker.viewmodel.HabitViewModel
 import java.time.LocalDate
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun HabitListScreen(
     navController: NavHostController,
@@ -154,6 +187,9 @@ fun HabitListScreen(
 
                         matchesSearch && matchesStatus && matchesReminder
                     }
+                    val listState = rememberLazyListState()
+                    var draggingHabitId by remember { mutableStateOf<String?>(null) }
+                    var dragOffsetY by remember { mutableStateOf(0f) }
 
                     Column(
                         modifier = Modifier
@@ -189,47 +225,88 @@ fun HabitListScreen(
 
                         Spacer(Modifier.height(12.dp))
 
-
                         LazyColumn(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f),
+                            state = listState,
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            items(filteredHabits, key = { it.id }) { habit ->
+                            itemsIndexed(filteredHabits, key = { _, habit -> habit.id }) { _, habit ->
+                                val isDragging = draggingHabitId == habit.id
+                                val itemModifier = Modifier
+                                    .fillMaxWidth()
+                                    .graphicsLayer {
+                                        shadowElevation = if (isDragging) 12f else 0f
+                                    }
+                                    .pointerInput(habit.id, filteredHabits) {
+                                        detectDragGesturesAfterLongPress(
+                                            onDragStart = {
+                                                draggingHabitId = habit.id
+                                                dragOffsetY = 0f
+                                            },
+                                            onDragCancel = {
+                                                draggingHabitId = null
+                                                dragOffsetY = 0f
+                                                viewModel.persistHabitOrder()
+                                            },
+                                            onDragEnd = {
+                                                draggingHabitId = null
+                                                dragOffsetY = 0f
+                                                viewModel.persistHabitOrder()
+                                            },
+                                            onDrag = { change, dragAmount ->
+                                                dragOffsetY += dragAmount.y
+                                                val targetIndex =
+                                                    listState.findTargetIndex(habit.id, dragOffsetY)
+                                                val targetHabitId =
+                                                    targetIndex?.let { filteredHabits.getOrNull(it)?.id }
+                                                if (targetHabitId != null && targetHabitId != habit.id) {
+                                                    viewModel.moveHabit(habit.id, targetHabitId)
+                                                }
+                                            }
+                                        )
+                                    }
+
                                 when (selectedViewMode) {
                                     HabitViewMode.Daily -> {
-                                        HabitRowCard(
-                                            habit = habit,
-                                            onClick = {
-                                                navController.navigate("habit_detail/${habit.id}") {
-                                                    launchSingleTop = true
-                                                }
-                                            },
-                                            onToggleToday = { viewModel.toggleCompletion(habit) }
-                                        )
+                                        Box(modifier = itemModifier) {
+                                            HabitRowCard(
+                                                habit = habit,
+                                                onClick = {
+                                                    navController.navigate("habit_detail/${habit.id}") {
+                                                        launchSingleTop = true
+                                                    }
+                                                },
+                                                onToggleToday = { viewModel.toggleCompletion(habit) }
+                                            )
+                                        }
                                     }
 
                                     HabitViewMode.Weekly -> {
-                                        WeeklyHabitCard(
-                                            habit = habit,
-                                            onClick = {
-                                                navController.navigate("habit_detail/${habit.id}") {
-                                                    launchSingleTop = true
+                                        Box(modifier = itemModifier) {
+                                            WeeklyHabitCard(
+                                                habit = habit,
+                                                onClick = {
+                                                    navController.navigate("habit_detail/${habit.id}") {
+                                                        launchSingleTop = true
+                                                    }
                                                 }
-                                            }
-                                        )
+                                            )
+                                        }
                                     }
 
                                     HabitViewMode.Monthly -> {
-                                        MonthlyHabitCard(
-                                            habit = habit,
-                                            onClick = {
-                                                navController.navigate("habit_detail/${habit.id}") {
-                                                    launchSingleTop = true
+                                        Box(modifier = itemModifier) {
+                                            MonthlyHabitCard(
+                                                habit = habit,
+                                                onClick = {
+                                                    navController.navigate("habit_detail/${habit.id}") {
+                                                        launchSingleTop = true
+                                                    }
                                                 }
-                                            }
-                                        )
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -249,11 +326,22 @@ fun HabitListScreen(
         }
     }
 }
+
+private fun LazyListState.findTargetIndex(itemKey: Any, dragOffset: Float): Int? {
+    val visibleItems = layoutInfo.visibleItemsInfo
+    val currentItem = visibleItems.find { it.key == itemKey } ?: return null
+    val middle = currentItem.offset + dragOffset + (currentItem.size / 2f)
+    return visibleItems.minByOrNull { item ->
+        abs(middle - (item.offset + item.size / 2f))
+    }?.index
+}
+
 @Composable
 private fun TodayOverviewCard(habits: List<Habit>, modifier: Modifier = Modifier) {
     val today = remember { LocalDate.now().toString() }
     val completedCount = habits.count { it.completedDates.contains(today) }
-    val completionRatio = if (habits.isEmpty()) 0f else (completedCount / habits.size.toFloat()).coerceIn(0f, 1f)
+    val completionRatio =
+        if (habits.isEmpty()) 0f else (completedCount / habits.size.toFloat()).coerceIn(0f, 1f)
     val completionPercent = (completionRatio * 100).roundToInt()
     val topStreak = habits.maxOfOrNull { it.streak } ?: 0
 
@@ -261,8 +349,6 @@ private fun TodayOverviewCard(habits: List<Habit>, modifier: Modifier = Modifier
     val colorScheme = MaterialTheme.colorScheme
     val start = colorScheme.primary
     val end = if (isDark) colorScheme.primaryContainer else colorScheme.secondary
-
-
 
     Card(
         modifier = modifier,
@@ -314,8 +400,6 @@ private fun TodayOverviewCard(habits: List<Habit>, modifier: Modifier = Modifier
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(6.dp),
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                    color = MaterialTheme.colorScheme.primary
                 )
 
                 Row(
@@ -387,7 +471,12 @@ private fun SearchAndFilterBar(
                         }
                     }
                 },
-                placeholder = { Text("Keresés név szerint", style = MaterialTheme.typography.bodySmall) }
+                placeholder = {
+                    Text(
+                        "Keresés név szerint",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
             )
 
             Box {
@@ -396,7 +485,8 @@ private fun SearchAndFilterBar(
                         Icon(
                             imageVector = Icons.Outlined.FilterList,
                             contentDescription = "Szűrők",
-                            tint = if (hasActiveFilters) MaterialTheme.colorScheme.primary else LocalContentColor.current
+                            tint = if (hasActiveFilters) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -505,6 +595,7 @@ private fun SearchAndFilterBar(
         }
     }
 }
+
 private enum class HabitViewMode(val label: String, val description: String) {
     Daily(label = "Napi nézet", description = "Napi nézet kiválasztása"),
     Weekly(label = "Heti nézet", description = "Heti nézet kiválasztása"),
@@ -514,6 +605,7 @@ private enum class HabitViewMode(val label: String, val description: String) {
 private enum class HabitStatusFilter { All, CompletedToday, PendingToday }
 
 private enum class ReminderFilter { All, WithReminder, WithoutReminder }
+
 @Composable
 private fun HabitViewModeSelector(
     selectedMode: HabitViewMode,
@@ -604,7 +696,8 @@ private fun WeeklyHabitCard(
     val completedCount = countCompletedInRange(habit, days)
     val goal = habit.weeklyGoal.coerceIn(0, 7)
     val denominator = if (goal > 0) goal else days.size
-    val progress = if (denominator == 0) 0f else (completedCount / denominator.toFloat()).coerceIn(0f, 1f)
+    val progress =
+        if (denominator == 0) 0f else (completedCount / denominator.toFloat()).coerceIn(0f, 1f)
     val summaryText = if (goal > 0) {
         "$completedCount / $goal nap a kitűzött célból"
     } else {
@@ -629,7 +722,8 @@ private fun MonthlyHabitCard(
 ) {
     val days = lastNDates(30)
     val completedCount = countCompletedInRange(habit, days)
-    val progress = if (days.isEmpty()) 0f else (completedCount / days.size.toFloat()).coerceIn(0f, 1f)
+    val progress =
+        if (days.isEmpty()) 0f else (completedCount / days.size.toFloat()).coerceIn(0f, 1f)
     val summaryText = "$completedCount nap megjelölve a ${days.size} napból"
 
     HabitSummaryTimelineCard(
@@ -711,8 +805,6 @@ private fun HabitSummaryTimelineCard(
             LinearProgressIndicator(
                 progress = { progress },
                 modifier = Modifier.fillMaxWidth(),
-                trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                color = MaterialTheme.colorScheme.primary
             )
 
             Text(

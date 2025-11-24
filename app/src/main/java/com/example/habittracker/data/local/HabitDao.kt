@@ -7,7 +7,7 @@ import androidx.room.Query
 
 @Dao
 interface HabitDao {
-    @Query("SELECT * FROM habits")
+    @Query("SELECT * FROM habits ORDER BY sortOrder")
     suspend fun getHabits(): List<HabitEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

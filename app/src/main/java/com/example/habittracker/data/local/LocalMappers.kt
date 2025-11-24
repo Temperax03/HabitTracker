@@ -11,7 +11,9 @@ fun HabitEntity.toDomain(): Habit = Habit(
     weeklyGoal = weeklyGoal,
     ownerId = ownerId,
     reminders = reminders,
+    sortOrder = sortOrder,
     notes = notes
+
 )
 
 fun Habit.toEntity(ownerIdOverride: String = ownerId): HabitEntity = HabitEntity(
@@ -24,4 +26,5 @@ fun Habit.toEntity(ownerIdOverride: String = ownerId): HabitEntity = HabitEntity
     ownerId = ownerIdOverride,
     reminders = reminders,
     notes = notes,
+    sortOrder = sortOrder,
 )

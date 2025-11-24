@@ -14,6 +14,8 @@ import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.util.UUID
 import com.example.habittracker.data.model.ReminderTime
+import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.SetOptions
 class HabitRepository(
     private val habitDao: HabitDao,
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
@@ -54,15 +56,17 @@ class HabitRepository(
         onChange: (List<Habit>) -> Unit,
         onError: (Throwable) -> Unit
     ): ListenerRegistration {
-        return habitCollection(userId).addSnapshotListener { snapshot, error ->
+        return habitCollection(userId)
+            .orderBy("sortOrder", Query.Direction.ASCENDING)
+            .addSnapshotListener { snapshot, error ->
             if (error != null) {
                 onError(error)
                 return@addSnapshotListener
             }
             if (snapshot == null) return@addSnapshotListener
 
-            val habits = snapshot.documents.mapNotNull { doc ->
-                val name = doc.getString("name") ?: return@mapNotNull null
+                val habits = snapshot.documents.mapIndexedNotNull { index, doc ->
+                    val name = doc.getString("name") ?: return@mapIndexedNotNull null
                 val completedDates = doc.get("completedDates") as? List<String> ?: emptyList()
                 val streak = doc.getLong("streak")?.toInt() ?: 0
                 val icon = doc.getString("icon") ?: "🔥"
@@ -86,6 +90,7 @@ class HabitRepository(
                     completedDates = completedDates,
                     streak = streak,
                     icon = icon,
+                    sortOrder = doc.getLong("sortOrder") ?: index.toLong(),
                     weeklyGoal = weeklyGoal,
                     ownerId = userId,
                     reminders = reminders,
@@ -93,7 +98,7 @@ class HabitRepository(
                 )
             }
 
-            onChange(habits)
+                onChange(habits.sortedBy { it.sortOrder })
         }
     }
 
@@ -104,6 +109,7 @@ class HabitRepository(
             "completedDates" to habit.completedDates,
             "streak" to habit.streak,
             "icon" to habit.icon,
+            "sortOrder" to habit.sortOrder,
             "weeklyGoal" to weeklyGoal,
             "ownerId" to userId,
             "notificationTime" to habit.reminders.firstOrNull()?.time,
@@ -138,6 +144,7 @@ class HabitRepository(
             "streak" to habit.streak,
             "icon" to habit.icon,
             "weeklyGoal" to weeklyGoal,
+            "sortOrder" to habit.sortOrder,
             "ownerId" to userId,
             "notificationTime" to habit.reminders.firstOrNull()?.time,
             "notes" to habit.notes,
@@ -152,6 +159,37 @@ class HabitRepository(
         document.set(payload).await()
         val storedHabit = habit.copy(weeklyGoal = weeklyGoal)
         habitDao.upsert(storedHabit.toEntity(userId))
+    }
+    suspend fun updateHabitOrders(userId: String, habits: List<Habit>) = withContext(dispatcher) {
+        val ordered = habits.mapIndexed { index, habit ->
+            habit.copy(sortOrder = index.toLong())
+        }
+
+        val batch = firestore.batch()
+        ordered.forEach { habit ->
+            val docRef = habitCollection(userId).document(habit.id)
+            val payload = mapOf(
+                "name" to habit.name,
+                "completedDates" to habit.completedDates,
+                "streak" to habit.streak,
+                "sortOrder" to habit.sortOrder,
+                "icon" to habit.icon,
+                "weeklyGoal" to habit.weeklyGoal,
+                "ownerId" to userId,
+                "notificationTime" to habit.reminders.firstOrNull()?.time,
+                "notes" to habit.notes,
+                "reminders" to habit.reminders.map { reminder ->
+                    mapOf(
+                        "time" to reminder.time,
+                        "days" to reminder.days
+                    )
+                }
+            )
+            batch.set(docRef, payload, SetOptions.merge())
+        }
+
+        batch.commit().await()
+        habitDao.upsertAll(ordered.map { it.toEntity(userId) })
     }
 
     suspend fun validateUniqueness(name: String, excludeId: String?): String? = withContext(dispatcher) {

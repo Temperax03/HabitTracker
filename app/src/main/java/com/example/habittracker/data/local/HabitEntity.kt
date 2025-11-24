@@ -14,4 +14,5 @@ data class HabitEntity(
     val ownerId: String,
     val reminders: List<ReminderTime>,
     val notes: String?,
+    val sortOrder: Long,
 )

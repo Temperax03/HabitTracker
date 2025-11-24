@@ -46,6 +46,8 @@ class HabitViewModel(
     private var listener: ListenerRegistration? = null
 
     private val notificationScheduler = NotificationScheduler(application)
+    private fun nextSortOrder(): Long = (_habits.maxOfOrNull { it.sortOrder } ?: -1L) + 1
+
 
     init {
         viewModelScope.launch { bootstrap() }
@@ -54,7 +56,7 @@ class HabitViewModel(
     private suspend fun bootstrap() {
         try {
             isLoading = true
-            val cached = repository.loadCachedHabits()
+            val cached = repository.loadCachedHabits().sortedBy { it.sortOrder }
             _habits.clear(); _habits.addAll(cached)
             ensureUserAvailable()
         } catch (e: Exception) {
@@ -138,6 +140,7 @@ class HabitViewModel(
             icon = icon,
             weeklyGoal = sanitizedGoal,
             ownerId = userId,
+            sortOrder = nextSortOrder(),
             reminders = reminders,
             notes = notes?.trim()?.takeIf { it.isNotEmpty() }
         )
@@ -200,7 +203,30 @@ class HabitViewModel(
                 .onFailure { errorMessage = it.message ?: "Nem sikerült frissíteni a szokást." }
         }
     }
+    fun moveHabit(habitId: String, targetHabitId: String) {
+        if (habitId == targetHabitId) return
+        val fromIndex = _habits.indexOfFirst { it.id == habitId }
+        val toIndex = _habits.indexOfFirst { it.id == targetHabitId }
+        if (fromIndex == -1 || toIndex == -1) return
 
+        val habit = _habits.removeAt(fromIndex)
+        val targetIndex = if (toIndex > fromIndex) toIndex - 1 else toIndex
+        _habits.add(targetIndex, habit)
+    }
+
+    fun persistHabitOrder() {
+        viewModelScope.launch {
+            val userId = ensureUserAvailable() ?: return@launch
+            val reordered = _habits.mapIndexed { index, habit ->
+                habit.copy(sortOrder = index.toLong())
+            }
+            _habits.clear(); _habits.addAll(reordered)
+            runCatching { repository.updateHabitOrders(userId, reordered) }
+                .onFailure {
+                    errorMessage = it.message ?: "Nem sikerült frissíteni a sorrendet."
+                }
+        }
+    }
     fun updateHabitDetails(
         habit: Habit,
         name: String,

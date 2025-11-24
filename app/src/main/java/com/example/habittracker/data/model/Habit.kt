@@ -6,7 +6,7 @@ data class Habit(
     val completedDates: List<String> = emptyList(),
     val streak: Int = 0,
 
-    val icon: String = HabitIcons.default,
+    val icon: String = "🔥",
     val weeklyGoal: Int = 5,
     val ownerId: String = "",
     val reminders: List<ReminderTime> = emptyList(),
