@@ -154,14 +154,11 @@ class HabitRepository(
         habitDao.upsert(storedHabit.toEntity(userId))
     }
 
-    suspend fun validateUniqueness(name: String, icon: String, excludeId: String?): String? = withContext(dispatcher) {
+    suspend fun validateUniqueness(name: String, excludeId: String?): String? = withContext(dispatcher) {
         val normalized = name.trim().lowercase()
         val cached = habitDao.getHabits()
         if (cached.any { it.id != excludeId && it.name.trim().lowercase() == normalized }) {
             return@withContext "Már létezik ilyen nevű szokás."
-        }
-        if (cached.any { it.id != excludeId && it.icon == icon }) {
-            return@withContext "Válassz másik ikont, ez már használatban van."
         }
         null
     }

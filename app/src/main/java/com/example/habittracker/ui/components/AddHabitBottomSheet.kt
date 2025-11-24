@@ -1,5 +1,6 @@
 package com.example.habittracker.ui.components
 
+import com.example.habittracker.data.model.HabitIcons
 import android.app.TimePickerDialog
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
@@ -58,8 +59,8 @@ fun AddHabitBottomSheet(
     var error by remember { mutableStateOf<String?>(null) }
 
 
-    val icons = listOf("🔥","✅","💧","📚","🏃‍♂️","🧘","🕗","🥦","☕","🎯")
-    var selectedIcon by remember { mutableStateOf("🔥") }
+    val icons = HabitIcons.all
+    var selectedIcon by remember { mutableStateOf(HabitIcons.default) }
     var weeklyGoal by remember { mutableStateOf(5f) }
     val reminders = remember { mutableStateListOf<ReminderTime>() }
     var selectedDays by remember { mutableStateOf(setOf<DayOfWeek>()) }
@@ -198,6 +199,7 @@ fun AddHabitBottomSheet(
                                     error = null
                                     reminders.clear()
                                     selectedDays = emptySet()
+                                    selectedIcon = HabitIcons.default
                                     onDismiss()
                                 }
                             }

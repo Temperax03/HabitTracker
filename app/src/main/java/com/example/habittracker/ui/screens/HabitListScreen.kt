@@ -90,6 +90,10 @@ fun HabitListScreen(
                     IconButton(onClick = {
                         navController.navigate("analytics") {
                             launchSingleTop = true
+                            restoreState = true
+                            popUpTo("habit_list") {
+                                saveState = true
+                            }
                         }
                     }) {
                         Icon(Icons.Outlined.Insights, contentDescription = "Elemzések")

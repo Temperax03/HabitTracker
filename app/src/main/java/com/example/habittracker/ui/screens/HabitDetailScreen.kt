@@ -54,6 +54,7 @@ import com.example.habittracker.ui.components.lastNDates
 import com.example.habittracker.viewmodel.HabitViewModel
 import java.time.DayOfWeek
 import java.time.LocalTime
+import com.example.habittracker.data.model.HabitIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,7 +65,7 @@ fun HabitDetailScreen(
 ) {
     val habit = viewModel.habits.firstOrNull { it.id == habitId }
     var name by remember(habit) { mutableStateOf(habit?.name.orEmpty()) }
-    var icon by remember(habit) { mutableStateOf(habit?.icon ?: "🔥") }
+    var icon by remember(habit) { mutableStateOf(habit?.icon ?: HabitIcons.default) }
     var weeklyGoal by remember(habit) { mutableFloatStateOf((habit?.weeklyGoal ?: 5).toFloat()) }
     val reminders = remember(habit) {
         mutableStateListOf<ReminderTime>().apply { addAll(habit?.reminders ?: emptyList()) }
@@ -152,7 +153,7 @@ fun HabitDetailScreen(
             // Ikonválasztó
             Text("Ikon", style = MaterialTheme.typography.bodyMedium)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                val icons = listOf("🔥","✅","💧","📚","🏃‍♂️","🧘","🕗","🥦","☕","🎯")
+                val icons = HabitIcons.all
                 icons.forEach { emoji ->
                     val selected = icon == emoji
                     AssistChip(
