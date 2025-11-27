@@ -1,10 +1,15 @@
 package com.example.habittracker.ui.screens
 
+
+import android.content.Context
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.ui.graphics.Color
-import android.content.Context
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -462,6 +467,7 @@ private fun SearchAndFilterBar(
             statusFilter != HabitStatusFilter.All ||
             reminderFilter != ReminderFilter.All
     var isMenuExpanded by remember { mutableStateOf(false) }
+    var isSearchExpanded by rememberSaveable { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(
@@ -469,32 +475,59 @@ private fun SearchAndFilterBar(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = onQueryChange,
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = 44.dp),
-                singleLine = true,
-                textStyle = MaterialTheme.typography.bodySmall,
-                leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = "Keresés") },
-                trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { onQueryChange("") }) {
-                            Icon(
-                                imageVector = Icons.Outlined.Close,
-                                contentDescription = "Keresés törlése"
-                            )
+            AnimatedVisibility(
+                visible = isSearchExpanded,
+                enter = fadeIn() + expandHorizontally(),
+                exit = fadeOut()
+            ) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = onQueryChange,
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 40.dp),
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.bodySmall,
+                    leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = "Keresés") },
+                    trailingIcon = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { onQueryChange("") }) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Close,
+                                        contentDescription = "Keresés törlése"
+                                    )
+                                }
+                            }
+                            IconButton(onClick = {
+                                onQueryChange("")
+                                isSearchExpanded = false
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Close,
+                                    contentDescription = "Keresés bezárása"
+                                )
+                            }
                         }
+                    },
+                    placeholder = {
+                        Text(
+                            "Keresés név szerint",
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
-                },
-                placeholder = {
-                    Text(
-                        "Keresés név szerint",
-                        style = MaterialTheme.typography.bodySmall
-                    )
+                )
+            }
+
+                    if (!isSearchExpanded) {
+                        IconButton(onClick = { isSearchExpanded = true }) {
+                            Icon(
+                                imageVector = Icons.Outlined.Search,
+                                contentDescription = "Keresés megnyitása",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                 }
-            )
+            }
 
             Box {
                 BadgedBox(badge = { if (hasActiveFilters) Badge() }) {
