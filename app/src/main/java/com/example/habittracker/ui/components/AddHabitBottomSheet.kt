@@ -1,5 +1,7 @@
 package com.example.habittracker.ui.components
 
+import java.time.format.TextStyle
+import java.util.Locale
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import com.example.habittracker.data.model.HabitIcons
@@ -19,6 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -67,6 +70,27 @@ fun AddHabitBottomSheet(
     val reminders = remember { mutableStateListOf<ReminderTime>() }
     var selectedDays by remember { mutableStateOf(setOf<DayOfWeek>()) }
 
+    val onSaveClick = {
+        val name = text.trim()
+        when {
+            name.isEmpty() -> error = "A név nem lehet üres."
+            name.length < 2 -> error = "Legalább 2 karakter."
+            weeklyGoal < 1f -> error = "A heti cél legyen legalább 1 nap."
+            else -> {
+                onSave(name, selectedIcon, weeklyGoal.toInt(), reminders.toList())
+                coroutineScope.launch { sheetState.hide() }.invokeOnCompletion {
+                    text = ""
+                    error = null
+                    reminders.clear()
+                    selectedDays = emptySet()
+                    selectedIcon = HabitIcons.default
+                    onDismiss()
+                }
+            }
+        }
+    }
+
+
     fun showTimePicker() {
         val now = LocalTime.now()
         TimePickerDialog(
@@ -90,7 +114,17 @@ fun AddHabitBottomSheet(
                 .verticalScroll(scrollState)
                 .padding(20.dp)
         ) {
-            Text("Új szokás hozzáadása", style = MaterialTheme.typography.titleLarge)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Új szokás hozzáadása", style = MaterialTheme.typography.titleLarge)
+                Button(
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    onClick = onSaveClick as () -> Unit
+                ) { Text("Mentés") }
+            }
             Spacer(Modifier.height(12.dp))
 
             OutlinedTextField(
@@ -145,7 +179,13 @@ fun AddHabitBottomSheet(
                         onClick = {
                             selectedDays = if (selected) selectedDays - day else selectedDays + day
                         },
-                        label = { Text(day.name.take(3)) },
+                        label = { Text(
+                            day.getDisplayName(
+                                TextStyle.SHORT,
+                                Locale.forLanguageTag("hu-HU")
+                            )
+                        )
+                                },
                         colors = AssistChipDefaults.assistChipColors(
                             containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer
                             else MaterialTheme.colorScheme.surfaceVariant
@@ -188,32 +228,10 @@ fun AddHabitBottomSheet(
 
 
             Spacer(Modifier.height(18.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 OutlinedButton(
                     onClick = { coroutineScope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() } }
                 ) { Text("Mégse") }
-
-                Button(
-                    onClick = {
-                        val name = text.trim()
-                        when {
-                            name.isEmpty() -> error = "A név nem lehet üres."
-                            name.length < 2 -> error = "Legalább 2 karakter."
-                            weeklyGoal < 1f -> error = "A heti cél legyen legalább 1 nap."
-                            else -> {
-                                onSave(name, selectedIcon, weeklyGoal.toInt(), reminders.toList())
-                                coroutineScope.launch { sheetState.hide() }.invokeOnCompletion {
-                                    text = ""
-                                    error = null
-                                    reminders.clear()
-                                    selectedDays = emptySet()
-                                    selectedIcon = HabitIcons.default
-                                    onDismiss()
-                                }
-                            }
-                        }
-                    }
-                ) { Text("Mentés") }
             }
 
             Spacer(Modifier.height(8.dp))

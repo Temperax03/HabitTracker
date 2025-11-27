@@ -1,5 +1,9 @@
 package com.example.habittracker.ui.screens
 
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.FabPosition
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.ui.graphics.Color
 import android.content.Context
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -137,7 +141,19 @@ fun HabitListScreen(
                 }
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        floatingActionButton = {
+            if (habits.isNotEmpty()) {
+                FloatingActionButton(
+                    onClick = { isSheetOpen = true },
+                    containerColor = Color(0xFF8B5CF6),
+                    contentColor = Color.White
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = "Új szokás")
+                }
+            }
+        },
+        floatingActionButtonPosition = FabPosition.Center
     ) { padding ->
 
         Box(
@@ -230,6 +246,7 @@ fun HabitListScreen(
                                 .fillMaxWidth()
                                 .weight(1f),
                             state = listState,
+                            contentPadding = PaddingValues(bottom = 96.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             itemsIndexed(filteredHabits, key = { _, habit -> habit.id }) { _, habit ->
