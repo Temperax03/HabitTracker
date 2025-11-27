@@ -55,8 +55,10 @@ import com.example.habittracker.viewmodel.HabitViewModel
 import java.time.DayOfWeek
 import java.time.LocalTime
 import com.example.habittracker.data.model.HabitIcons
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.Row
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun HabitDetailScreen(
     habitId: String,
@@ -152,7 +154,7 @@ fun HabitDetailScreen(
 
             // Ikonválasztó
             Text("Ikon", style = MaterialTheme.typography.bodyMedium)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 val icons = HabitIcons.all
                 icons.forEach { emoji ->
                     val selected = icon == emoji
@@ -177,7 +179,7 @@ fun HabitDetailScreen(
             )
             Text("Értesítések", style = MaterialTheme.typography.titleMedium)
             Text(text = stringResource(id = R.string.notification_days_hint), style = MaterialTheme.typography.bodySmall)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 DayOfWeek.entries.forEach { day ->
                     val selected = selectedDays.contains(day)
                     AssistChip(

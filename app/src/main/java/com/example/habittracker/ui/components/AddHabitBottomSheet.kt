@@ -111,7 +111,7 @@ fun AddHabitBottomSheet(
             Spacer(Modifier.height(12.dp))
             Text("Ikon", style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.height(8.dp))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 icons.forEach { emoji ->
                     val selected = selectedIcon == emoji
                     AssistChip(
@@ -138,7 +138,7 @@ fun AddHabitBottomSheet(
             Spacer(Modifier.height(4.dp))
             Text(text = stringResource(id = R.string.notification_days_hint), style = MaterialTheme.typography.bodySmall)
             Spacer(Modifier.height(8.dp))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 DayOfWeek.entries.forEach { day ->
                     val selected = selectedDays.contains(day)
                     AssistChip(
